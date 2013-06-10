@@ -1,13 +1,15 @@
-=== Introduction ===
+Introduction
+============
 
 httpdmon is a *command-line utility* based on PHP that monitors and prints info about multiple Apache logfiles in realtime.
 
-=== Installation ===
+Installation
+============
 
 You can use the following shell-script to install/update this script:
 
     F=/usr/bin/httpdmon
-    U=githuburl
+    U=https://raw.github.com/uuf6429/httpdmon/master/httpdmon.php
     
     sudo su
     rm -f $F
@@ -17,6 +19,7 @@ You can use the following shell-script to install/update this script:
 
 After running the above commands, you can launch the utility any time just by typing `httpdmon` on the command line.
 
-=== Screenshot(s) ===
+Screenshot(s)
+=============
 
 See it in action...
