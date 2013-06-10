@@ -18,12 +18,11 @@ Installation
 
 You can use the following shell-script to install/update this script:
 
+    sudo su
     F=/usr/bin/httpdmon
     U=https://raw.github.com/uuf6429/httpdmon/master/httpdmon.php
-    
-    sudo su
     rm -f $F
-    wget $U -O $F
+    wget -O $F $U
     echo '#!/usr/bin/php'|cat - $F > /tmp/out && mv -f /tmp/out $F
     chmod +x $F
 
