@@ -1,7 +1,17 @@
+README
+======
+
 Introduction
 ------------
 
-httpdmon is a *command-line utility* based on PHP that monitors and prints info about multiple Apache logfiles in realtime.
+httpdmon is a *command-line utility* based on PHP that monitors and prints information parsed from multiple Apache logfiles in (almost) realtime.
+
+Requirements
+------------
+
+This software has been tested and guaranteed to work on PHP 5.3+ on a Linux (CentOS) system. In the future, a Windows version might be available.
+
+**Important:** The default logfile paths might not be the same on your system, in which case edit the script file accordingly.
 
 Installation
 ------------
@@ -24,4 +34,4 @@ Screenshot(s)
 
 See it in action...
 
-[Imgur](http://i.imgur.com/tNZU1rZ.png)
+![Imgur Screenshot](http://i.imgur.com/tNZU1rZ.png)
