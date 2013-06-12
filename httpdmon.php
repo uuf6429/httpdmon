@@ -1,11 +1,8 @@
 <?php
 	
-	// default settings
-	
-	define('REFRESH_INTERVAL', 50);                                                                        // refresh interval in msec
-	define('ACCESSLOG_PATHS', '/var/www/vhosts/*/statistics/logs/access_log;/var/log/httpd/access_log');   // semicolon-separated list of error_log paths
-	define('ERRORLOG_PATHS', '/var/www/vhosts/*/statistics/logs/error_log;/var/log/httpd/error_log');      // semicolon-separated list of access_log paths
-	define('CON_WIDTH', max(80, (int)exec('tput cols')));                                                  // (automatically) detect console width
+	define('VERSION', '1.0.3');
+	define('IS_WIN', strtoupper(substr(PHP_OS, 0, 3)) === 'WIN');
+	define('CON_WIDTH', IS_WIN ? 80 : max(80, (int)exec('tput cols')));
 	
 	// no web access pls!
 	
@@ -14,12 +11,83 @@
 		exit(1);
 	}
 	
+	// cli option parser helpers
+	
+	function cli_get($optname, $default = null){
+		global $argv;
+		if(substr($optname, 0, 1) == '-'){ // --opt=val
+			$optname = '-'.$optname.'=';
+			$optlen = strlen($optname);
+			foreach($argv as $arg)
+				if(substr($arg, 0, $optlen) == $optname)
+					return substr($arg, $optlen);
+		}else { // -opt val
+			$pos = array_search((IS_WIN ? '/' : '-').$optname, $argv);
+			if($pos !== false && isset($argv[$pos + 1]) && 
+			  substr($argv[$pos + 1], 0, 1) != (IS_WIN ? '/' : '-'))
+				return $argv[$pos + 1];
+		}
+		return $default;
+	}
+	
+	function cli_has($option){
+		global $argv;
+		return in_array($option, $argv);
+	}
+	
+	// handle some particular cli options
+	
+	if(cli_has('-v') || cli_has('--version') || cli_has('/v')){
+		echo 'httpdmon '.VERSION.PHP_EOL;
+		echo 'Copyright (c) 2013-'.@date('Y').' Christian Sciberras'.PHP_EOL;
+		exit;
+	}
+	
+	if(cli_has('-h') || cli_has('--help') || cli_has('/?')){
+		echo 'Usage: httpdmon '.(IS_WIN ? '/?' : '--help').PHP_EOL;
+		echo '       httpdmon '.(IS_WIN ? '/v' : '--version').PHP_EOL;
+		echo '       httpdmon [options]'.PHP_EOL;
+		echo '  '.str_pad(IS_WIN ? '/a FILES' : '-a FILES', 27).' List of semi-colon separated access log files'.PHP_EOL;
+		echo '  '.str_pad(IS_WIN ? '/c' : '-c', 27).' Make use of colors, even on Windows'.PHP_EOL;
+		echo '  '.str_pad(IS_WIN ? '/d DELAY' : '-d, --delay=DELAY', 27).' Delay between updates in milliseconds (default is 100)'.PHP_EOL;
+		echo '  '.str_pad(IS_WIN ? '/e FILES' : '-e FILES', 27).' List of semi-colon separated error log files'.PHP_EOL;
+		echo '  '.str_pad(IS_WIN ? '/?' : '-h, --help', 27).' Show this help and exit'.PHP_EOL;
+		echo '  '.str_pad(IS_WIN ? '/m' : '-m', 27).' Only show errors (and access entries with status of 400+)'.PHP_EOL;
+		echo '  '.str_pad(IS_WIN ? '/t' : '-t', 27).' Force plain text (no colors)'.PHP_EOL;
+		echo '  '.str_pad(IS_WIN ? '/v' : '-v, --version', 27).' Show program version and exit'.PHP_EOL;
+		exit;
+	}
+	
+	// set up default options
+	
+	define('REFRESH_INTERVAL', cli_has('--delay') ? cli_get('-delay', 100) : cli_get('d', 100));    // refresh interval in msec
+	define('ACCESSLOG_PATHS', cli_get('a', implode(';', array(                  // semicolon-separated list of access_log paths
+		'/var/log/httpd/access_log',                                            // linux
+		'/var/www/vhosts/*/statistics/logs/access_log',                         // linux + plesk
+		'C:\\Program Files\\Zend\\Apache2\\logs\\access.log',                   // windows + zend
+		'C:\\wamp\\logs\\access.log',                                           // windows + wamp
+	))));
+	define('ERRORLOG_PATHS', cli_get('e', implode(';', array(                   // semicolon-separated list of error_log paths
+		'/var/log/httpd/error_log',                                             // linux
+		'/var/www/vhosts/*/statistics/logs/error_log',                          // linux + plesk
+		'C:\\Program Files\\Zend\\Apache2\\logs\\error.log',                    // windows + zend
+		'C:\\wamp\\logs\\apache_error.log',                                     // windows + wamp
+	))));
+	define('SHOW_ERRORS_ONLY', cli_has('-m') || cli_has('/m'));                 // show errors only
+	define('FORCE_COLOR', cli_has('-c') || cli_has('/c'));                      // force colors (on Windows)
+	define('FORCE_PLAIN', cli_has('-t') || cli_has('/t'));                      // force colors (on Windows)
+	
+	if(FORCE_COLOR && FORCE_PLAIN){
+		echo 'Please decide if you want colors (-c) or not (-t), not both, Dummkopf!';
+		exit(1);
+	}
+	
 	// ensure we can run forever
 	
 	set_time_limit(0);
 	while(ob_get_level())ob_end_flush();
 	ob_implicit_flush(true);
-
+	
 	// utility classes
 	
 	class LogLines extends ArrayObject {
@@ -192,7 +260,11 @@
 		);
 		static $reset = "\033[0m";
 		$color = isset($colors[$color]) ? "\033[".$colors[$color].'m' : '';
-		return $color . $message . $reset;
+		return FORCE_PLAIN ? $message : (
+				((!IS_WIN || FORCE_COLOR) ? $color : '')
+				. $message .
+				((!IS_WIN || FORCE_COLOR) ? $reset : '')
+			);
 	}
 	
 	function overwrite_line($message){
@@ -217,6 +289,7 @@
 				switch(true){
 					case $monitor instanceof AccesslogFileMonitor:
 						foreach($monitor->getLines() as $line){
+							if(SHOW_ERRORS_ONLY && $line->code < 400)continue; // not an error empty, go to next entry
 							echo '['.colorize_message('ACCESS', 'cyan').'] ';
 							echo colorize_message(str_pad($line->ip, 16), 'yellow');
 							echo colorize_message(str_pad($monitor->getDomain(), 32), 'brown').' ';
