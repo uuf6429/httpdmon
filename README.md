@@ -23,7 +23,7 @@ You can use the following shell-script to install/update this script:
     U=https://raw.github.com/uuf6429/httpdmon/master/httpdmon.php
     rm -f $F
     wget -O $F $U
-    echo '#!/usr/bin/php'|cat - $F > /tmp/out && mv -f /tmp/out $F
+    echo '#!/usr/bin/php-cli'|cat - $F > /tmp/out && mv -f /tmp/out $F
     chmod +x $F
 
 After running the above commands, you can launch the utility any time just by typing `httpdmon` on the command line.
