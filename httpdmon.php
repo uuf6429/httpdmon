@@ -66,8 +66,8 @@
 		'/var/www/vhosts/*/statistics/logs/access_log',                         // linux + plesk
 		'C:\\Program Files\\Zend\\Apache2\\logs\\access.log',                   // windows + zend
 		'C:\\wamp\\logs\\access.log',                                           // windows + wamp
-		'/usr/local/apache/logs/access_log'                                     // linux + whm/cpanel
-		'/home/*/access-logs/*'                                                 // linux + whm/cpanel
+		'/usr/local/apache/logs/access_log',                                    // linux + whm/cpanel
+		'/home/*/access-logs/*',                                                // linux + whm/cpanel
 	))));
 	define('ERRORLOG_PATHS', cli_get('e', implode(';', array(                   // semicolon-separated list of error_log paths
 		'/var/log/httpd/error_log',                                             // linux
