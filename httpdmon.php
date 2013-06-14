@@ -66,12 +66,14 @@
 		'/var/www/vhosts/*/statistics/logs/access_log',                         // linux + plesk
 		'C:\\Program Files\\Zend\\Apache2\\logs\\access.log',                   // windows + zend
 		'C:\\wamp\\logs\\access.log',                                           // windows + wamp
+		'/usr/local/apache/logs/access_log'                                     // linux + whm/cpanel
 	))));
 	define('ERRORLOG_PATHS', cli_get('e', implode(';', array(                   // semicolon-separated list of error_log paths
 		'/var/log/httpd/error_log',                                             // linux
 		'/var/www/vhosts/*/statistics/logs/error_log',                          // linux + plesk
 		'C:\\Program Files\\Zend\\Apache2\\logs\\error.log',                    // windows + zend
 		'C:\\wamp\\logs\\apache_error.log',                                     // windows + wamp
+		'/usr/local/apache/logs/error_log',                                     // linux + whm/cpanel
 	))));
 	define('SHOW_ERRORS_ONLY', cli_has('-m') || cli_has('/m'));                 // show errors only
 	define('FORCE_COLOR', cli_has('-c') || cli_has('/c'));                      // force colors (on Windows)
