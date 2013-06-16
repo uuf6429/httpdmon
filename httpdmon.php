@@ -6,7 +6,7 @@
 	
 	// no web access pls!
 	
-	if(!defined('STDIN') || !isset($argv)){
+	if(isset($_SERVER['SERVER_NAME']) || !isset($argv)){
 		echo 'This is a shell script, not a web service.'.PHP_EOL;
 		exit(1);
 	}
