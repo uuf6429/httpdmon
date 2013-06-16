@@ -152,16 +152,16 @@
 			$this->data = '';
 			return false;
 		}
-
+		
 		public function getChanges(){
 			return $this->data;
 		}
-			
+		
 		public function getLines(){
 			return explode("\r", str_replace(array("\r\n", "\n"), "\r", $this->data));
 		}
 	}
-
+	
 	class AccesslogFileMonitor extends FileMonitor {
 		public function getLines(){
 			// 78.136.44.9 - - [09/Jun/2013:04:10:45 +0100] "GET / HTTP/1.0" 200 6836 "-" "the user agent"
@@ -253,8 +253,27 @@
 	
 	// some misc CLI routines
 	
+	function reset_parts(){
+		$GLOBALS['parts'] = 0;
+	}
+	reset_parts();
+	
 	function write_line($message){
+		reset_parts();
 		echo $message.PHP_EOL;
+	}
+	
+	function write_part($part){
+		echo $part;
+		// strip ansi escape characters from part
+		$part = preg_replace('/\x1b(\[|\(|\))[;?0-9]*[0-9A-Za-z]/', '', $part); 
+		$part = preg_replace('/\x1b(\[|\(|\))[;?0-9]*[0-9A-Za-z]/', '', $part); 
+		$part = preg_replace('/[\x03|\x1a]/', '', $part);  
+		$GLOBALS['parts'] += strlen($part);
+	}
+	
+	function count_parts(){
+		return $GLOBALS['parts'];
 	}
 	
 	function colorize_message($message, $color){
@@ -308,24 +327,25 @@
 					case $monitor instanceof AccesslogFileMonitor:
 						foreach($monitor->getLines() as $line){
 							if(SHOW_ERRORS_ONLY && $line->code < 400)continue; // not an error empty, go to next entry
-							echo '['.colorize_message('ACCESS', 'cyan').'] ';
-							echo colorize_message(RESOLVE_IPS ? substr(str_pad(resolve_ip($line->ip), 32), 0, 32) : str_pad($line->ip, 16), 'yellow');
-							echo colorize_message(str_pad($monitor->getDomain(), 32), 'brown').' ';
-							echo colorize_message(str_pad($line->method, 5), 'light_purple');
-							echo colorize_message(str_replace('&', colorize_message('&', 'dark_gray'), $line->url), 'white');
-							echo colorize_message(' > ', 'dark_gray');
-							echo colorize_message($line->code, $line->code < 400 ? 'green' : 'red');
-							echo colorize_message(' (', 'dark_gray').colorize_message($line->size, 'white').colorize_message(' bytes)', 'dark_gray');
+							write_part('['.colorize_message('ACCESS', 'cyan').'] ');
+							write_part(colorize_message(RESOLVE_IPS ? substr(str_pad(resolve_ip($line->ip), 48), 0, 48) : str_pad($line->ip, 16), 'yellow').' ');
+							write_part(colorize_message(str_pad($monitor->getDomain(), 32), 'brown').' ');
+							write_part(colorize_message(str_pad($line->method, 5), 'light_purple'));
+							write_part(colorize_message(str_replace('&', colorize_message('&', 'dark_gray'), $line->url), 'white'));
+							write_part(colorize_message(' > ', 'dark_gray'));
+							write_part(colorize_message($line->code, $line->code < 400 ? 'green' : 'red'));
+							write_part(colorize_message(' (', 'dark_gray').colorize_message($line->size, 'white').colorize_message(' bytes)', 'dark_gray'));
+							reset_parts();
 							echo PHP_EOL;
 						}
 						break;
 					case $monitor instanceof ErrorlogFileMonitor:
 						foreach($monitor->getLines() as $line){
-							echo '['.colorize_message('ERROR', 'red').']  ';
-							echo colorize_message(RESOLVE_IPS ? substr(str_pad(resolve_ip($line->ip), 32), 0, 32) : str_pad($line->ip, 16), 'yellow');
-							echo colorize_message(str_pad($monitor->getDomain(), 32), 'brown').' ';
-							echo colorize_message($line->message, 'red');
-							echo PHP_EOL;
+							write_part('['.colorize_message('ERROR', 'red').']  ');
+							write_part(colorize_message(RESOLVE_IPS ? substr(str_pad(resolve_ip($line->ip), 48), 0, 48) : str_pad($line->ip, 16), 'yellow').' ');
+							write_part(colorize_message(str_pad($monitor->getDomain(), 32), 'brown').' ');
+							$remaining = CON_WIDTH - count_parts();
+							write_line(colorize_message(implode(str_pad('', count_parts()), str_split($line->message, $remaining)), 'red'));
 						}
 						break;
 					default:
