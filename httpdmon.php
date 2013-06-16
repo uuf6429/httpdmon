@@ -53,6 +53,7 @@
 		echo '  '.str_pad(IS_WIN ? '/e FILES' : '-e FILES', 27).' List of semi-colon separated error log files'.PHP_EOL;
 		echo '  '.str_pad(IS_WIN ? '/?' : '-h, --help', 27).' Show this help and exit'.PHP_EOL;
 		echo '  '.str_pad(IS_WIN ? '/m' : '-m', 27).' Only show errors (and access entries with status of 400+)'.PHP_EOL;
+		echo '  '.str_pad(IS_WIN ? '/r' : '-r', 27).' Resolve IP Addresses to Hostnames'.PHP_EOL;
 		echo '  '.str_pad(IS_WIN ? '/t' : '-t', 27).' Force plain text (no colors)'.PHP_EOL;
 		echo '  '.str_pad(IS_WIN ? '/v' : '-v, --version', 27).' Show program version and exit'.PHP_EOL;
 		exit;
@@ -79,6 +80,7 @@
 	define('SHOW_ERRORS_ONLY', cli_has('-m') || cli_has('/m'));                 // show errors only
 	define('FORCE_COLOR', cli_has('-c') || cli_has('/c'));                      // force colors (on Windows)
 	define('FORCE_PLAIN', cli_has('-t') || cli_has('/t'));                      // force colors (on Windows)
+	define('RESOLVE_IPS', cli_has('-r') || cli_has('/r'));                      // resolve ip addresses
 	
 	if(FORCE_COLOR && FORCE_PLAIN){
 		echo 'Please decide if you want colors (-c) or not (-t), not both, Dummkopf!';
@@ -236,6 +238,19 @@
 	set_error_handler('ErrorHandler::handle_error');
 	set_exception_handler('ErrorHandler::handle_exception');
 	
+	// ip resolver (and cacher)
+	
+	function resolve_ip($ip){
+		static $cache = array();
+		static $ttl = 60000; // live for one minute
+		$now = time();
+		if(!trim($ip))return 'unknown';
+		if(!isset($cache[$ip]) || $cache[$ip][1] < $now - $ttl){
+			$cache[$ip] = array(gethostbyaddr($ip), $now);
+		}
+		return $cache[$ip][0];
+	}
+	
 	// some misc CLI routines
 	
 	function write_line($message){
@@ -294,7 +309,7 @@
 						foreach($monitor->getLines() as $line){
 							if(SHOW_ERRORS_ONLY && $line->code < 400)continue; // not an error empty, go to next entry
 							echo '['.colorize_message('ACCESS', 'cyan').'] ';
-							echo colorize_message(str_pad($line->ip, 16), 'yellow');
+							echo colorize_message(RESOLVE_IPS ? substr(str_pad(resolve_ip($line->ip), 32), 0, 32) : str_pad($line->ip, 16), 'yellow');
 							echo colorize_message(str_pad($monitor->getDomain(), 32), 'brown').' ';
 							echo colorize_message(str_pad($line->method, 5), 'light_purple');
 							echo colorize_message(str_replace('&', colorize_message('&', 'dark_gray'), $line->url), 'white');
@@ -307,7 +322,7 @@
 					case $monitor instanceof ErrorlogFileMonitor:
 						foreach($monitor->getLines() as $line){
 							echo '['.colorize_message('ERROR', 'red').']  ';
-							echo colorize_message(str_pad($line->ip, 16), 'yellow');
+							echo colorize_message(RESOLVE_IPS ? substr(str_pad(resolve_ip($line->ip), 32), 0, 32) : str_pad($line->ip, 16), 'yellow');
 							echo colorize_message(str_pad($monitor->getDomain(), 32), 'brown').' ';
 							echo colorize_message($line->message, 'red');
 							echo PHP_EOL;
