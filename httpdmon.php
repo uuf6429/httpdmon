@@ -270,9 +270,7 @@
 	
 	function cli_strlen($str){
 		// strip ansi escape characters from string
-		$str = preg_replace('/\x1b(\[|\(|\))[;?0-9]*[0-9A-Za-z]/', '', $str);
-		$str = preg_replace('/\x1b(\[|\(|\))[;?0-9]*[0-9A-Za-z]/', '', $str);
-		$str = preg_replace('/[\x03|\x1a]/', '', $str);
+		$str = preg_replace('/\033\[[0-9;]*m/', '', $str);
 		return strlen($str);
 	}
 	
