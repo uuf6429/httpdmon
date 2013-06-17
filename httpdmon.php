@@ -264,12 +264,16 @@
 	}
 	
 	function write_part($part){
+		$GLOBALS['parts'] += cli_strlen($part);
 		echo $part;
-		// strip ansi escape characters from part
-		$part = preg_replace('/\x1b(\[|\(|\))[;?0-9]*[0-9A-Za-z]/', '', $part); 
-		$part = preg_replace('/\x1b(\[|\(|\))[;?0-9]*[0-9A-Za-z]/', '', $part); 
-		$part = preg_replace('/[\x03|\x1a]/', '', $part);  
-		$GLOBALS['parts'] += strlen($part);
+	}
+	
+	function cli_strlen($str){
+		// strip ansi escape characters from string
+		$str = preg_replace('/\x1b(\[|\(|\))[;?0-9]*[0-9A-Za-z]/', '', $str);
+		$str = preg_replace('/\x1b(\[|\(|\))[;?0-9]*[0-9A-Za-z]/', '', $str);
+		$str = preg_replace('/[\x03|\x1a]/', '', $str);
+		return strlen($str);
 	}
 	
 	function count_parts(){
@@ -331,12 +335,13 @@
 							write_part(colorize_message(RESOLVE_IPS ? substr(str_pad(resolve_ip($line->ip), 48), 0, 48) : str_pad($line->ip, 16), 'yellow').' ');
 							write_part(colorize_message(str_pad($monitor->getDomain(), 32), 'brown').' ');
 							write_part(colorize_message(str_pad($line->method, 5), 'light_purple'));
-							write_part(colorize_message(str_replace('&', colorize_message('&', 'dark_gray'), $line->url), 'white'));
-							write_part(colorize_message(' > ', 'dark_gray'));
-							write_part(colorize_message($line->code, $line->code < 400 ? 'green' : 'red'));
-							write_part(colorize_message(' (', 'dark_gray').colorize_message($line->size, 'white').colorize_message(' bytes)', 'dark_gray'));
-							reset_parts();
-							echo PHP_EOL;
+							$long_mesg = ''
+								. colorize_message(str_replace('&', colorize_message('&', 'dark_gray'), $line->url), 'white')
+								. colorize_message(' > ', 'dark_gray')
+								. colorize_message($line->code, $line->code < 400 ? 'green' : 'red')
+								. colorize_message(' (', 'dark_gray').colorize_message($line->size, 'white').colorize_message(' bytes)', 'dark_gray')
+							;
+							write_line(implode(str_pad(PHP_EOL, count_parts()), str_split($long_mesg, CON_WIDTH - count_parts())));
 						}
 						break;
 					case $monitor instanceof ErrorlogFileMonitor:
@@ -344,8 +349,8 @@
 							write_part('['.colorize_message('ERROR', 'red').']  ');
 							write_part(colorize_message(RESOLVE_IPS ? substr(str_pad(resolve_ip($line->ip), 48), 0, 48) : str_pad($line->ip, 16), 'yellow').' ');
 							write_part(colorize_message(str_pad($monitor->getDomain(), 32), 'brown').' ');
-							$remaining = CON_WIDTH - count_parts();
-							write_line(colorize_message(implode(str_pad('', count_parts()), str_split($line->message, $remaining)), 'red'));
+							$long_mesg = colorize_message($line->message, 'red');
+							write_line(implode(str_pad(PHP_EOL, count_parts()), str_split($long_mesg, CON_WIDTH - count_parts())));
 						}
 						break;
 					default:
