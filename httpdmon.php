@@ -263,9 +263,13 @@
 		echo $message.PHP_EOL;
 	}
 	
-	function write_part($part){
+	function write_part($parts){
+		// find the last line
+		$part = explode(PHP_EOL, $parts);
+		$part = array_pop($part);
+		// count visible chars
 		$GLOBALS['parts'] += cli_strlen($part);
-		echo $part;
+		echo $parts;
 	}
 	
 	function cli_strlen($str){
@@ -280,24 +284,25 @@
 	
 	function colorize_message($message, $color){
 		static $colors = array(
-			'black' => '0;30',
-			'dark_gray' => '1;30',
-			'blue' => '0;34',
-			'light_blue' => '1;34',
-			'green' => '0;32',
-			'light_green' => '1;32',
-			'cyan' => '0;36',
-			'light_cyan' => '1;36',
-			'red' => '0;31',
-			'light_red' => '1;31',
-			'purple' => '0;35',
+			'black'        => '0;30',
+			'dark_gray'    => '1;30',
+			'red'          => '0;31',
+			'light_red'    => '1;31',
+			'green'        => '0;32',
+			'light_green'  => '1;32',
+			'brown'        => '0;33',
+			'yellow'       => '1;33',
+			'blue'         => '0;34',
+			'light_blue'   => '1;34',
+			'purple'       => '0;35',
 			'light_purple' => '1;35',
-			'brown' => '0;33',
-			'yellow' => '1;33',
-			'light_gray' => '0;37',
-			'white' => '1;37',
+			'cyan'         => '0;36',
+			'light_cyan'   => '1;36',
+			'light_gray'   => '0;37',
+			'white'        => '1;37',
 		);
-		static $reset = "\033[0m";
+		static $reset    = "\033[0m";
+		$color = strtolower(str_replace(array(' ', '-'), '_', trim($color)));
 		$color = isset($colors[$color]) ? "\033[".$colors[$color].'m' : '';
 		return FORCE_PLAIN ? $message : (
 				((!IS_WIN || FORCE_COLOR) ? $color : '')
