@@ -1,6 +1,6 @@
 <?php
 	
-	define('VERSION', '1.2.7');
+	define('VERSION', '1.2.8');
 	
 	### FUNCTION / CLASS DECLERATIONS ###
 	
@@ -177,6 +177,8 @@
 				$this->time = $time;
 				$size = filesize($this->file);
 				if($this->size != $size){
+					if($this->size > $size)
+						$this->size = 0; // file has been truncated, reset read pointer
 					if(($fh = fopen($this->file, 'rb')) === false)
 						throw new Exception("Cannot open file `{$this->file}` for reading");
 					fseek($fh, $this->size, SEEK_SET);
