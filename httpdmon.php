@@ -1,6 +1,6 @@
 <?php
 	
-	define('VERSION', '1.2.9');
+	define('VERSION', '1.2.10');
 	
 	### FUNCTION / CLASS DECLERATIONS ###
 	
@@ -507,7 +507,7 @@
 							write_part('['.colorize_message('ACCESS', 'cyan').'] ');
 							write_part(colorize_message(RESOLVE_IPS ? substr(str_pad(resolve_ip($line->ip), 48), 0, 48) : str_pad($line->ip, 16), 'yellow').' ');
 							write_part(colorize_message(str_pad($domain, 32), 'brown').' ');
-							write_part(colorize_message(str_pad($line->method, 5), 'light_purple'));
+							write_part(colorize_message(str_pad($line->method, 8), 'light_purple'));
 							$long_mesg = ''
 								. colorize_message(str_replace('&', colorize_message('&', 'dark_gray'), $line->url), 'white')
 								. colorize_message(' > ', 'dark_gray')
