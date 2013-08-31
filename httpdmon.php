@@ -38,8 +38,10 @@
 		static $intentions = array(-1=>'fail',0=>'ignore',1=>'update');
 		// process
 		$notify('start');
+		$notify('before_download', array('url'=>$update_url));
 		if(!($data = file_get_contents($update_url)))
 			return $notify('error', array('reason'=>'File download failed', 'target'=>$update_url)) && false;
+		$notify('after_download', array('data'=>&$data));
 		if(!preg_match($options['version_regex'], $data, $next_version))
 			return $notify('error', array('reason'=>'Could not determine version of target file', 'target'=>$data, 'result'=>$next_version)) && false;
 		if(!($next_version = array_pop($next_version)))
@@ -400,6 +402,11 @@
 							write_line('Your version is newer');
 							break;
 					}
+					break;
+				case 'after_download':
+					// prepends to downloaded data if current file currently uses it
+					if(substr(file_get_contents(__FILE__), 0, 14) == '#!/usr/bin/php')
+						$args['data'] = '#!/usr/bin/php -q'.PHP_EOL.$args['data'];
 					break;
 				case 'before_try':
 					write_line('Testing downloaded update...');
