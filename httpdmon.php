@@ -1,6 +1,6 @@
 <?php
 	
-	define('VERSION', '1.1.0');
+	define('VERSION', '1.2.1');
 	
 	### FUNCTION / CLASS DECLERATIONS ###
 	
@@ -12,6 +12,74 @@
 			$cache = strtoupper(substr(PHP_OS, 0, 3)) === 'WIN';
 		}
 		return $cache;
+	}
+	
+	/**
+	 * Attempts to update current file from URL.
+	 * @param string $update_url Target URL to read updates from.
+	 * @param array|object $options Array of options (see docs for more info).
+	 */
+	function update_script($update_url, $options){
+		// initialize
+		$options = array_merge(array(
+			'current_version' => '0.0.0',															// Version of the current file/script.
+			'version_regex' => '/define\\(\\s*[\'"]version[\'"]\\s*,\\s*[\'"](.*?)[\'"]\\s*\\)/i',	// Regular expression for finding version in target file.
+			'try_run' => true,																		// Try running downloaded file to ensure it works.
+			'on_event' => create_function('', ''),													// Used by updater to notify callee on event changes.
+			'target_file' => $_SERVER['SCRIPT_FILENAME'],											// The file to be overwritten by the updater.
+			'force_update' => false,																// Force local file to be overwritten by remote file regardless of version.
+			'try_run_cmd' => null,																	// Command called to verify the upgrade is fine.
+		), (array)$options);
+		if(is_null($options['try_run_cmd'])) // build command with the correct target_file
+			$options['try_run_cmd'] = 'php -f '.escapeshellarg($options['target_file']);
+		$notify = $options['on_event'];
+		$rollback = false;
+		$next_version = null;
+		static $intentions = array(-1=>'fail',0=>'ignore',1=>'update');
+		// process
+		$notify('start');
+		if(!($data = file_get_contents($update_url)))
+			return $notify('error', array('reason'=>'File download failed', 'target'=>$update_url)) && false;
+		if(!preg_match($options['version_regex'], $data, $next_version))
+			return $notify('error', array('reason'=>'Could not determine version of target file', 'target'=>$data, 'result'=>$next_version)) && false;
+		if(!($next_version = array_pop($next_version)))
+			return $notify('error', array('reason'=>'Version of target file is empty', 'target'=>$data, 'result'=>$next_version)) && false;
+		$v_diff = version_compare($next_version, $options['current_version']);
+		$should_fail = $notify('version_check', array('intention'=>$intentions[$v_diff], 'curr_version'=>$options['current_version'], 'next_version'=>$next_version));
+		if($should_fail === false)
+			return $notify('error', array('reason'=>'Update cancelled by user code')) && false;
+		if($v_diff === 0 && !$options['force_update'])
+			return $notify('already_uptodate') && false;
+		if($v_diff === -1 && !$options['force_update'])
+			return $notify('warn', array('reason'=>'Local file is newer than remote one', 'curr_version'=>$options['current_version'], 'next_version'=>$next_version)) && false;
+		if(!rename($options['target_file'], $options['target_file'].'.bak'))
+			$notify('warn', array('reason'=>'Backup operation failed', 'target'=>$options['target_file']));
+		if(!file_put_contents($options['target_file'], $data)){
+			$notify('warn', array('reason'=>'Failed writing to file', 'target'=>$options['target_file']));
+			$rollback = true;
+		}
+		if(!$rollback && $options['try_run']){
+			$notify('before_try', array('options'=>$options));
+			ob_start();
+			$exit = null;
+			passthru($options['try_run_cmd'], $exit);
+			$out = ob_get_clean();
+			$notify('after_try', array('options'=>$options, 'output'=>$out, 'exitcode'=>$exit));
+			if($exit != 0){
+				$notify('warn', array('reason'=>'Downloaded update seems to be broken', 'output'=>$out, 'exitcode'=>$exit));
+				$rollback = true;
+			}
+		}
+		if($rollback){
+			$notify('before_rollback', array('options'=>$options));
+			if(!rename($options['target_file'].'.bak', $options['target_file']))
+				return $notify('error', array('reason'=>'Rollback operation failed', 'target'=>$options['target_file'].'.bak')) && false;
+			$notify('after_rollback', array('options'=>$options));
+			return;
+		}
+		if(!unlink($options['target_file'].'.bak'))
+			$notify('warn', array('reason'=>'Cleanup operation failed', 'target'=>$options['target_file'].'.bak'));
+		$notify('finish');
 	}
 	
 	// cli functions
@@ -200,7 +268,8 @@
 		 * @param Exception $e Das exception.
 		 */
 		public static function handle_exception(Exception $e){
-			echo PHP_EOL.'['.colorize_message('FATAL', 'red').'] '.$e->getMessage().' (code '.$e->getCode().', line '.$e->getLine().')'.PHP_EOL;
+			write_line();
+			write_line('['.colorize_message('FATAL', 'red').'] '.$e->getMessage().' (code '.$e->getCode().', line '.$e->getLine().')');
 			exit(1); // yeah something broke...
 		}
 	}
@@ -227,7 +296,7 @@
 	}
 	reset_parts();
 	
-	function write_line($message){
+	function write_line($message = ''){
 		reset_parts();
 		echo $message.PHP_EOL;
 	}
@@ -288,30 +357,73 @@
 	
 	// no web access pls!
 	if(isset($_SERVER['SERVER_NAME']) || !isset($argv)){
-		echo 'This is a shell script, not a web service.'.PHP_EOL;
+		write_line('This is a shell script, not a web service.');
 		exit(1);
 	}
 	
 	// handle some particular cli options
-	if(cli_has('-v') || cli_has('--version') || cli_has('/v')){
-		echo 'httpdmon '.VERSION.PHP_EOL;
-		echo 'Copyright (c) 2013-'.@date('Y').' Christian Sciberras'.PHP_EOL;
+	if(cli_has('-h') || cli_has('--help') || cli_has('/?')){
+		write_line('Usage: httpdmon '.(is_windows() ? '/?' : '--help'));
+		write_line('       httpdmon '.(is_windows() ? '/u' : '--update'));
+		write_line('       httpdmon '.(is_windows() ? '/v' : '--version'));
+		write_line('       httpdmon [options]');
+		write_line('  '.str_pad(is_windows() ? '/a FILES' : '-a FILES', 27).' List of semi-colon separated access log files');
+		write_line('  '.str_pad(is_windows() ? '/c' : '-c', 27).' Make use of colors, even on Windows');
+		write_line('  '.str_pad(is_windows() ? '/d DELAY' : '-d, --delay=DELAY', 27).' Delay between updates in milliseconds (default is 100)');
+		write_line('  '.str_pad(is_windows() ? '/e FILES' : '-e FILES', 27).' List of semi-colon separated error log files');
+		write_line('  '.str_pad(is_windows() ? '/?' : '-h, --help', 27).' Show this help and exit');
+		write_line('  '.str_pad(is_windows() ? '/m' : '-m', 27).' Only show errors (and access entries with status of 400+)');
+		write_line('  '.str_pad(is_windows() ? '/r' : '-r', 27).' Resolve IP Addresses to Hostnames');
+		write_line('  '.str_pad(is_windows() ? '/t' : '-t', 27).' Force plain text (no colors)');
+		write_line('  '.str_pad(is_windows() ? '/u' : '-u, --update', 27).' Attempt program update and exit');
+		write_line('  '.str_pad(is_windows() ? '/v' : '-v, --version', 27).' Show program version and exit');
 		exit;
 	}
-	if(cli_has('-h') || cli_has('--help') || cli_has('/?')){
-		echo 'Usage: httpdmon '.(is_windows() ? '/?' : '--help').PHP_EOL;
-		echo '       httpdmon '.(is_windows() ? '/v' : '--version').PHP_EOL;
-		echo '       httpdmon [options]'.PHP_EOL;
-		echo '  '.str_pad(is_windows() ? '/a FILES' : '-a FILES', 27).' List of semi-colon separated access log files'.PHP_EOL;
-		echo '  '.str_pad(is_windows() ? '/c' : '-c', 27).' Make use of colors, even on Windows'.PHP_EOL;
-		echo '  '.str_pad(is_windows() ? '/d DELAY' : '-d, --delay=DELAY', 27).' Delay between updates in milliseconds (default is 100)'.PHP_EOL;
-		echo '  '.str_pad(is_windows() ? '/e FILES' : '-e FILES', 27).' List of semi-colon separated error log files'.PHP_EOL;
-		echo '  '.str_pad(is_windows() ? '/?' : '-h, --help', 27).' Show this help and exit'.PHP_EOL;
-		echo '  '.str_pad(is_windows() ? '/m' : '-m', 27).' Only show errors (and access entries with status of 400+)'.PHP_EOL;
-		echo '  '.str_pad(is_windows() ? '/r' : '-r', 27).' Resolve IP Addresses to Hostnames'.PHP_EOL;
-		echo '  '.str_pad(is_windows() ? '/t' : '-t', 27).' Force plain text (no colors)'.PHP_EOL;
-		echo '  '.str_pad(is_windows() ? '/v' : '-v, --version', 27).' Show program version and exit'.PHP_EOL;
-		exit;
+	if(cli_has('/u') || cli_has('--update') || cli_has('-u')){
+		function event_handler($event, $args=array()){
+			switch($event){
+				case 'error':
+					write_line('['.colorize_message('FATAL', 'red').'] '.$args['reason']);
+					break;
+				case 'warn':
+					write_line('['.colorize_message('WARNING', 'yellow').'] '.$args['reason']);
+					break;
+				case 'version_check':
+					switch($args['intentions']){
+						case 'update':
+							write_line('Updating to '.$args['next_version'].'...');
+							break;
+						case 'ignore':
+							write_line('Already up to date');
+							break;
+						case 'fail':
+							write_line('Your version is newer');
+							break;
+					}
+					break;
+				case 'before_try':
+					write_line('Testing downloaded update...');
+					break;
+				case 'after_try':
+					write_line('Update completed successfully!');
+					break;
+			}
+		}
+		update_script(
+			'https://raw.github.com/uuf6429/httpdmon/master/httpdmon.php?nc='.mt_rand(),
+			array(
+				'current_version' => VERSION,
+				'try_run' => true,
+				'on_event' => 'event_handler',
+			)
+		);
+		exit(defined('IS_ERROR') ? 1 : 0);
+	}
+	if(cli_has('-v') || cli_has('--version') || cli_has('/v')){
+		date_default_timezone_set('Europe/Malta');
+		write_line('httpdmon '.VERSION);
+		write_line('Copyright (c) 2013-'.date('Y').' Christian Sciberras');
+		exit(0);
 	}
 	
 	// set up default options
@@ -319,7 +431,7 @@
 	define('ACCESSLOG_PATHS', cli_get('a', implode(';', array(                  // semicolon-separated list of access_log paths
 		'/var/log/httpd/access_log',                                            // linux
 		'/var/www/vhosts/*/statistics/logs/access_log',                         // linux + plesk
-		'C:\\Program Files\\Zend\\Apache2\\logs\\access.log',                   // windows + zend
+		getenv('ProgramFiles').'\\Zend\\Apache2\\logs\\access.log',             // windows + zend
 		'C:\\wamp\\logs\\access.log',                                           // windows + wamp
 		'/usr/local/apache/logs/access_log',                                    // linux + whm/cpanel
 		'/home/*/access-logs/*',                                                // linux + whm/cpanel
@@ -327,7 +439,7 @@
 	define('ERRORLOG_PATHS', cli_get('e', implode(';', array(                   // semicolon-separated list of error_log paths
 		'/var/log/httpd/error_log',                                             // linux
 		'/var/www/vhosts/*/statistics/logs/error_log',                          // linux + plesk
-		'C:\\Program Files\\Zend\\Apache2\\logs\\error.log',                    // windows + zend
+		getenv('ProgramFiles').'\\Zend\\Apache2\\logs\\error.log',              // windows + zend
 		'C:\\wamp\\logs\\apache_error.log',                                     // windows + wamp
 		'/usr/local/apache/logs/error_log',                                     // linux + whm/cpanel
 	))));
@@ -338,7 +450,7 @@
 	
 	// try being smarter than the user :D
 	if(FORCE_COLOR && FORCE_PLAIN){
-		echo 'Please decide if you want colors (-c) or not (-t), not both, Dummkopf!';
+		write_line('Please decide if you want colors (-c) or not (-t), not both, Dummkopf!');
 		exit(1);
 	}
 	
@@ -351,11 +463,13 @@
 	
 	$monitors = array();
 	foreach(explode(';', ACCESSLOG_PATHS) as $path)
-		foreach(glob($path) as $file)
-			$monitors[] = new AccesslogFileMonitor($file);
+		if(!!($files = glob($path)))
+			foreach($files as $file)
+				$monitors[] = new AccesslogFileMonitor($file);
 	foreach(explode(';', ERRORLOG_PATHS) as $path)
-		foreach(glob($path) as $file)
-			$monitors[] = new ErrorlogFileMonitor($file);
+		if(!!($files = glob($path)))
+			foreach($files as $file)
+				$monitors[] = new ErrorlogFileMonitor($file);
 	
 	### MAIN PROGRAM LOOP ###
 	
@@ -389,8 +503,7 @@
 						}
 						break;
 					default:
-						echo colorize_message('Unknown monitor type', 'red').PHP_EOL;
-						break;
+						throw new Exception('Unknown monitor type "'.get_class($monitor).'"');
 				}
 			}
 		}
