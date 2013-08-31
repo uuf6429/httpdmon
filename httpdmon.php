@@ -1,6 +1,6 @@
 <?php
 	
-	define('VERSION', '1.2.6');
+	define('VERSION', '1.2.7');
 	
 	### FUNCTION / CLASS DECLERATIONS ###
 	
@@ -485,13 +485,15 @@
 	while(true){
 		foreach($monitors as $monitor){
 			if($monitor->hasChanges()){
+				$domain = $monitor->getDomain();
+				$domain = trim($domain) ? $domain : 'cannot resolve vhost';
 				switch(true){
 					case $monitor instanceof AccesslogFileMonitor:
 						foreach($monitor->getLines() as $line){
 							if(SHOW_ERRORS_ONLY && $line->code < 400)continue; // not an error empty, go to next entry
 							write_part('['.colorize_message('ACCESS', 'cyan').'] ');
 							write_part(colorize_message(RESOLVE_IPS ? substr(str_pad(resolve_ip($line->ip), 48), 0, 48) : str_pad($line->ip, 16), 'yellow').' ');
-							write_part(colorize_message(str_pad($monitor->getDomain(), 32), 'brown').' ');
+							write_part(colorize_message(str_pad($domain, 32), 'brown').' ');
 							write_part(colorize_message(str_pad($line->method, 5), 'light_purple'));
 							$long_mesg = ''
 								. colorize_message(str_replace('&', colorize_message('&', 'dark_gray'), $line->url), 'white')
@@ -507,7 +509,7 @@
 						foreach($monitor->getLines() as $line){
 							write_part('['.colorize_message('ERROR', 'red').']  ');
 							write_part(colorize_message(RESOLVE_IPS ? substr(str_pad(resolve_ip($line->ip), 48), 0, 48) : str_pad($line->ip, 16), 'yellow').' ');
-							write_part(colorize_message(str_pad($monitor->getDomain(), 32), 'brown').' ');
+							write_part(colorize_message(str_pad($domain, 32), 'brown').' ');
 							$long_mesg = colorize_message($line->message, 'red');
 							//write_line(implode(str_pad(PHP_EOL, count_parts()), str_split($long_mesg, cli_width() - count_parts())));
 							write_line($long_mesg);
