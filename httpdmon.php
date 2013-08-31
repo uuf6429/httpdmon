@@ -1,6 +1,6 @@
 <?php
 	
-	define('VERSION', '1.2.3');
+	define('VERSION', '1.2.4');
 	
 	### FUNCTION / CLASS DECLERATIONS ###
 	
@@ -52,7 +52,7 @@
 			return $notify('already_uptodate') && false;
 		if($v_diff === -1 && !$options['force_update'])
 			return $notify('warn', array('reason'=>'Local file is newer than remote one', 'curr_version'=>$options['current_version'], 'next_version'=>$next_version)) && false;
-		if(!rename($options['target_file'], $options['target_file'].'.bak'))
+		if(!copy($options['target_file'], $options['target_file'].'.bak'))
 			$notify('warn', array('reason'=>'Backup operation failed', 'target'=>$options['target_file']));
 		if(!file_put_contents($options['target_file'], $data)){
 			$notify('warn', array('reason'=>'Failed writing to file', 'target'=>$options['target_file']));
@@ -79,7 +79,7 @@
 		}
 		if(!unlink($options['target_file'].'.bak'))
 			$notify('warn', array('reason'=>'Cleanup operation failed', 'target'=>$options['target_file'].'.bak'));
-		$notify('finish');
+		$notify('finish', array('new_version'=>$next_version));
 	}
 	
 	// cli functions
@@ -404,8 +404,9 @@
 				case 'before_try':
 					write_line('Testing downloaded update...');
 					break;
-				case 'after_try':
-					write_line('Update completed successfully!');
+				case 'finish':
+					write_line('Update completed successfully.');
+					write_line('Welcome to '.basename(__FILE__, '.php').' '.$args['new_version'].'!');
 					break;
 			}
 		}
@@ -414,6 +415,7 @@
 			array(
 				'current_version' => VERSION,
 				'try_run' => true,
+				'try_run_cmd' => 'php -f '.escapeshellarg(__FILE__).' -- /v',
 				'on_event' => 'event_handler',
 			)
 		);
