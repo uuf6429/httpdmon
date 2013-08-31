@@ -1,6 +1,6 @@
 <?php
 	
-	define('VERSION', '1.2.1');
+	define('VERSION', '1.2.3');
 	
 	### FUNCTION / CLASS DECLERATIONS ###
 	
@@ -342,10 +342,10 @@
 		static $reset    = "\033[0m";
 		$color = strtolower(str_replace(array(' ', '-'), '_', trim($color)));
 		$color = isset($colors[$color]) ? "\033[".$colors[$color].'m' : '';
-		return FORCE_PLAIN ? $message : (
-				((!is_windows() || FORCE_COLOR) ? $color : '')
+		return defined('FORCE_PLAIN') && FORCE_PLAIN ? $message : (
+				((!is_windows() || (defined('FORCE_COLOR') && FORCE_COLOR)) ? $color : '')
 				. $message .
-				((!is_windows() || FORCE_COLOR) ? $reset : '')
+				((!is_windows() || (defined('FORCE_COLOR') && FORCE_COLOR)) ? $reset : '')
 			);
 	}
 	
@@ -389,7 +389,7 @@
 					write_line('['.colorize_message('WARNING', 'yellow').'] '.$args['reason']);
 					break;
 				case 'version_check':
-					switch($args['intentions']){
+					switch($args['intention']){
 						case 'update':
 							write_line('Updating to '.$args['next_version'].'...');
 							break;
