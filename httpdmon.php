@@ -499,7 +499,8 @@
 								. colorize_message($line->code, $line->code < 400 ? 'green' : 'red')
 								. colorize_message(' (', 'dark_gray').colorize_message($line->size, 'white').colorize_message(' bytes)', 'dark_gray')
 							;
-							write_line(implode(str_pad(PHP_EOL, count_parts()), str_split($long_mesg, cli_width() - count_parts())));
+							//write_line(implode(str_pad(PHP_EOL, count_parts()), str_split($long_mesg, cli_width() - count_parts())));
+							write_line($long_mesg);
 						}
 						break;
 					case $monitor instanceof ErrorlogFileMonitor:
@@ -508,7 +509,8 @@
 							write_part(colorize_message(RESOLVE_IPS ? substr(str_pad(resolve_ip($line->ip), 48), 0, 48) : str_pad($line->ip, 16), 'yellow').' ');
 							write_part(colorize_message(str_pad($monitor->getDomain(), 32), 'brown').' ');
 							$long_mesg = colorize_message($line->message, 'red');
-							write_line(implode(str_pad(PHP_EOL, count_parts()), str_split($long_mesg, cli_width() - count_parts())));
+							//write_line(implode(str_pad(PHP_EOL, count_parts()), str_split($long_mesg, cli_width() - count_parts())));
+							write_line($long_mesg);
 						}
 						break;
 					default:
