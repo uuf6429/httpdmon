@@ -1,6 +1,6 @@
 <?php
 	
-	define('VERSION', '1.2.8');
+	define('VERSION', '1.2.9');
 	
 	### FUNCTION / CLASS DECLERATIONS ###
 	
@@ -101,6 +101,16 @@
 				return $argv[$pos + 1];
 		}
 		return $default;
+	}
+	
+	function cli_clear(){
+		if(is_windows()){
+			// since calling 'cls' doesn't work, we use the following hack...
+			for($l=0; $l<cli_height(); $l++)
+				write_line(str_pad('', cli_width(), ' '));
+		}else{
+			passthru('clear');
+		}
 	}
 	
 	function cli_has($option){
@@ -484,6 +494,7 @@
 	
 	### MAIN PROGRAM LOOP ###
 	
+	cli_clear();
 	while(true){
 		foreach($monitors as $monitor){
 			if($monitor->hasChanges()){
