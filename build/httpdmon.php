@@ -534,6 +534,7 @@ class HttpdMon
 
     protected function DoMainLoop()
     {
+        $con = $this->console;
         while (true) {
             // check for file changes
             foreach ($this->monitors as $monitor) {
@@ -546,15 +547,15 @@ class HttpdMon
                                 if ($this->errorsOnly && $line->code < 400) {
                                     continue; // not an error empty, go to next entry
                                 }
-                                write_part('['.colorize_message('ACCESS', 'cyan').'] ');
-                                write_part(colorize_message($this->resolveIps ? substr(str_pad(resolve_ip($line->ip), 48), 0, 48) : str_pad($line->ip, 16), 'yellow').' ');
-                                write_part(colorize_message(str_pad($domain, 32), 'brown').' ');
-                                write_part(colorize_message(str_pad($line->method, 8), 'light_purple'));
+                                $con->WritePart('['.$con->Colorize('ACCESS', Console::C_CYAN).'] ');
+                                $con->WritePart($con->Colorize($this->resolveIps ? substr(str_pad(resolve_ip($line->ip), 48), 0, 48) : str_pad($line->ip, 16), Console::C_YELLOW).' ');
+                                $con->WritePart($con->Colorize(str_pad($domain, 32), Console::C_BROWN).' ');
+                                $con->WritePart($con->Colorize(str_pad($line->method, 8), Console::C_LIGHT_PURPLE));
                                 $long_mesg = ''
-                                    . colorize_message(str_replace('&', colorize_message('&', 'dark_gray'), $line->url), 'white')
-                                    . colorize_message(' > ', 'dark_gray')
-                                    . colorize_message($line->code, $line->code < 400 ? 'green' : 'red')
-                                    . colorize_message(' (', 'dark_gray').colorize_message($line->size, 'white').colorize_message(' bytes)', 'dark_gray')
+                                    . $con->Colorize(str_replace('&', $con->Colorize('&', Console::C_DARK_GRAY), $line->url), Console::C_WHITE)
+                                    . $con->Colorize(' > ', Console::C_DARK_GRAY)
+                                    . $con->Colorize($line->code, $line->code < 400 ? Console::C_GREEN : Console::C_RED)
+                                    . $con->Colorize(' (', Console::C_DARK_GRAY).$con->Colorize($line->size, Console::C_WHITE).$con->Colorize(' bytes)', Console::C_DARK_GRAY)
                                 ;
                                 //write_line(implode(str_pad(PHP_EOL, count_parts()), str_split($long_mesg, cli_width() - count_parts())));
                                 write_line($long_mesg);
@@ -562,10 +563,10 @@ class HttpdMon
                             break;
                         case $monitor instanceof ErrorlogFileMonitor:
                             foreach ($monitor->getLines() as $line) {
-                                write_part('['.colorize_message('ERROR', 'red').']  ');
-                                write_part(colorize_message($this->resolveIps ? substr(str_pad(resolve_ip($line->ip), 48), 0, 48) : str_pad($line->ip, 16), 'yellow').' ');
-                                write_part(colorize_message(str_pad($domain, 32), 'brown').' ');
-                                $long_mesg = colorize_message($line->message, 'red');
+                                $con->WritePart('['.$con->Colorize('ERROR', Console::C_RED).']  ');
+                                $con->WritePart($con->Colorize($this->resolveIps ? substr(str_pad(resolve_ip($line->ip), 48), 0, 48) : str_pad($line->ip, 16), Console::C_YELLOW).' ');
+                                $con->WritePart($con->Colorize(str_pad($domain, 32), Console::C_BROWN).' ');
+                                $long_mesg = $con->Colorize($line->message, Console::C_RED);
                                 //write_line(implode(str_pad(PHP_EOL, count_parts()), str_split($long_mesg, cli_width() - count_parts())));
                                 write_line($long_mesg);
                             }

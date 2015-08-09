@@ -68,7 +68,7 @@ class HttpdMon
 
     protected function DoMainLoop()
     {
-		$con = $this->console;
+        $con = $this->console;
         while (true) {
             // check for file changes
             foreach ($this->monitors as $monitor) {
