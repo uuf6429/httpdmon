@@ -11,6 +11,8 @@ Requirements
 
 This software has been tested and guaranteed to work on PHP 5.3+ on a Linux (CentOS) system. In the future, a Windows version might be available.
 
+Note that for the console colors to work on Windows, [ansicon](https://github.com/adoxa/ansicon) is required.
+
 **Important:** The default logfile paths might not be the same on your system, in which case edit the script file accordingly.
 
 Installation
