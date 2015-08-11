@@ -118,7 +118,7 @@ class Console
         $part = array_pop($part);
 
         // count visible chars
-        $this->parts += cli_strlen($part);
+        $this->parts += $this->StrLen($part);
         echo $parts;
     }
     

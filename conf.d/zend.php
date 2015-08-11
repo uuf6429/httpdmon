@@ -2,11 +2,11 @@
 
 return array(
         array(
-            'type' => 'access',
+            'class' => 'AccessLogFileMonitor',
             'path' => getenv('ProgramFiles').'\\Zend\\Apache2\\logs\\access.log',
         ),
         array(
-            'type' => 'error',
+            'class' => 'ErrorLogFileMonitor',
             'path' => getenv('ProgramFiles').'\\Zend\\Apache2\\logs\\error.log',
         ),
     );

@@ -45,9 +45,10 @@ class HttpdMon
 
     protected $resolveIps = false;
     protected $errorsOnly = false;
+    protected $enabled = true;
 
     /**
-     * @var FileMonitor[]
+     * @var AbstractFileMonitor[]
      */
     protected $monitors = array();
     protected $interval = 0;
@@ -57,68 +58,225 @@ class HttpdMon
         $result = array();
 
         foreach ($this->config->GetMonitorConfig() as $cfg) {
-            $cls = ucfirst($cfg['type'] . 'logFileMonitor');
+            $cls = $cfg['class'];
+            $host_parser = isset($cfg['host_parser']) ? create_function('$file,$line', $cfg['host_parser']) : null;
+            $file_parser = isset($cfg['file_parser']) ? create_function('$file,$lines', $cfg['file_parser']) : null;
+            $file_regexp = isset($cfg['file_regexp']) ? $cfg['file_regexp'] : null;
             foreach (glob($cfg['path']) as $file) {
-                $result[] = new $cls($file);
+                $result[] = new $cls($file, $host_parser, $file_parser, $file_regexp);
             }
         }
         
         return $result;
     }
 
-    protected function DoMainLoop()
+    protected function PrintHelp()
     {
         $con = $this->console;
-        while (true) {
+        $con->WriteLine('Usage: httpdmon '.(IS_WINDOWS ? '/?' : '--help'));
+        $con->WriteLine('       httpdmon '.(IS_WINDOWS ? '/u' : '--update'));
+        $con->WriteLine('       httpdmon '.(IS_WINDOWS ? '/v' : '--version'));
+        $con->WriteLine('       httpdmon [options]');
+        $con->WriteLine('  '.str_pad(IS_WINDOWS ? '/c' : '-c', 27).' Make use of colors, even on Windows (requires ansicon or similar)');
+        $con->WriteLine('  '.str_pad(IS_WINDOWS ? '/d DELAY' : '-d, --delay=DELAY', 27).' Delay between updates in milliseconds (default is 100)');
+        $con->WriteLine('  '.str_pad(IS_WINDOWS ? '/?' : '-h, --help', 27).' Show this help and exit');
+        $con->WriteLine('  '.str_pad(IS_WINDOWS ? '/m' : '-m', 27).' Only show errors (and access entries with status of 400+)');
+        $con->WriteLine('  '.str_pad(IS_WINDOWS ? '/r' : '-r', 27).' Resolve IP Addresses to Hostnames');
+        $con->WriteLine('  '.str_pad(IS_WINDOWS ? '/t' : '-t', 27).' Force plain text (no colors)');
+        $con->WriteLine('  '.str_pad(IS_WINDOWS ? '/u' : '-u, --update', 27).' Attempt program update and exit');
+        $con->WriteLine('  '.str_pad(IS_WINDOWS ? '/v' : '-v, --version', 27).' Show program version and exit');
+    }
+
+    protected function PrintVersion()
+    {
+        date_default_timezone_set('Europe/Berlin');
+        $this->console->WriteLine('httpdmon ' . VERSION);
+        $this->console->WriteLine('Copyright (c) 2013-' . date('Y') . ' Christian Sciberras');
+    }
+
+    protected function RunMainLoop()
+    {
+        $this->console->Clear();
+        
+        $this->errorsOnly = $this->console->HasArg('m');
+        $this->resolveIps = $this->console->HasArg('r');
+        $this->interval = ($this->console->HasArg('-delay')
+                ? $this->console->GetArg('-delay', 100)
+                : $this->console->GetArg('d', 100)
+            ) * 1000;
+        $this->monitors = $this->CreateMonitors();
+        
+        while ($this->enabled) {
             // check for file changes
             foreach ($this->monitors as $monitor) {
-                if ($monitor->hasChanges()) {
-                    $domain = $monitor->getDomain();
-                    $domain = trim($domain) ? $domain : 'cannot resolve vhost';
-                    switch (true) {
-                        case $monitor instanceof AccesslogFileMonitor:
-                            foreach ($monitor->getLines() as $line) {
-                                if ($this->errorsOnly && $line->code < 400) {
-                                    continue; // not an error empty, go to next entry
-                                }
-                                $con->WritePart('['.$con->Colorize('ACCESS', Console::C_CYAN).'] ');
-                                $con->WritePart($con->Colorize($this->resolveIps ? substr(str_pad(resolve_ip($line->ip), 48), 0, 48) : str_pad($line->ip, 16), Console::C_YELLOW).' ');
-                                $con->WritePart($con->Colorize(str_pad($domain, 32), Console::C_BROWN).' ');
-                                $con->WritePart($con->Colorize(str_pad($line->method, 8), Console::C_LIGHT_PURPLE));
-                                $long_mesg = ''
-                                    . $con->Colorize(str_replace('&', $con->Colorize('&', Console::C_DARK_GRAY), $line->url), Console::C_WHITE)
-                                    . $con->Colorize(' > ', Console::C_DARK_GRAY)
-                                    . $con->Colorize($line->code, $line->code < 400 ? Console::C_GREEN : Console::C_RED)
-                                    . $con->Colorize(' (', Console::C_DARK_GRAY).$con->Colorize($line->size, Console::C_WHITE).$con->Colorize(' bytes)', Console::C_DARK_GRAY)
-                                ;
-                                //write_line(implode(str_pad(PHP_EOL, count_parts()), str_split($long_mesg, cli_width() - count_parts())));
-                                write_line($long_mesg);
-                            }
-                            break;
-                        case $monitor instanceof ErrorlogFileMonitor:
-                            foreach ($monitor->getLines() as $line) {
-                                $con->WritePart('['.$con->Colorize('ERROR', Console::C_RED).']  ');
-                                $con->WritePart($con->Colorize($this->resolveIps ? substr(str_pad(resolve_ip($line->ip), 48), 0, 48) : str_pad($line->ip, 16), Console::C_YELLOW).' ');
-                                $con->WritePart($con->Colorize(str_pad($domain, 32), Console::C_BROWN).' ');
-                                $long_mesg = $con->Colorize($line->message, Console::C_RED);
-                                //write_line(implode(str_pad(PHP_EOL, count_parts()), str_split($long_mesg, cli_width() - count_parts())));
-                                write_line($long_mesg);
-                            }
-                            break;
-                        default:
-                            throw new Exception('Unknown monitor type "'.get_class($monitor).'"');
-                    }
+                if ($monitor->HasChanges()) {
+                    $monitor->Display($this->console, $this->resolveIps, $this->errorsOnly);
                 }
             }
+
             // did user decide to quit?
             /*if (non_block_read() == 'q') {
-				exit();
+			exit();
 			}*/
-            // give the cpu time to breath
+            
+            // give the cpu some time to breath
             usleep($this->interval);
         }
     }
-    
+
+    protected $UpdateScriptExitCode = 0;
+
+    /**
+     * Attempts to update current file from URL.
+     * @param string $update_url Target URL to read updates from.
+     * @param array|object $options Array of options (see docs for more info).
+     */
+    protected function UpdateScript($update_url, $options)
+    {
+        // initialize
+        $options = array_merge(array(
+            'current_version' => '0.0.0',                                                           // Version of the current file/script.
+            'version_regex' => '/define\\(\\s*[\'"]version[\'"]\\s*,\\s*[\'"](.*?)[\'"]\\s*\\)/i',  // Regular expression for finding version in target file.
+            'try_run' => true,                                                                      // Try running downloaded file to ensure it works.
+            'on_event' => create_function('', ''),                                                  // Used by updater to notify callee on event changes.
+            'target_file' => $_SERVER['SCRIPT_FILENAME'],                                           // The file to be overwritten by the updater.
+            'force_update' => false,                                                                // Force local file to be overwritten by remote file regardless of version.
+            'try_run_cmd' => null,                                                                  // Command called to verify the upgrade is fine.
+        ), (array)$options);
+        if (is_null($options['try_run_cmd'])) { // build command with the correct target_file
+            $options['try_run_cmd'] = 'php -f '.escapeshellarg($options['target_file']);
+        }
+        $notify = $options['on_event'];
+        $rollback = false;
+        $next_version = null;
+        static $intentions = array(-1=>'fail',0=>'ignore',1=>'update');
+        
+        // process
+        $notify('start');
+        $notify('before_download', array('url'=>$update_url));
+        
+        if (!($data = file_get_contents($update_url))) {
+            return $notify('error', array('reason'=>'File download failed', 'target'=>$update_url)) && false;
+        }
+        
+        $notify('after_download', array('data'=>&$data));
+        
+        if (!preg_match($options['version_regex'], $data, $next_version)) {
+            return $notify('error', array('reason'=>'Could not determine version of target file', 'target'=>$data, 'result'=>$next_version)) && false;
+        }
+        
+        if (!($next_version = array_pop($next_version))) {
+            return $notify('error', array('reason'=>'Version of target file is empty', 'target'=>$data, 'result'=>$next_version)) && false;
+        }
+        
+        $v_diff = version_compare($next_version, $options['current_version']);
+        $should_fail = $notify('version_check', array('intention'=>$intentions[$v_diff], 'curr_version'=>$options['current_version'], 'next_version'=>$next_version));
+        
+        if ($should_fail === false) {
+            return $notify('error', array('reason'=>'Update cancelled by user code')) && false;
+        }
+        
+        if ($v_diff === 0 && !$options['force_update']) {
+            return $notify('already_uptodate') && false;
+        }
+        
+        if ($v_diff === -1 && !$options['force_update']) {
+            return $notify('warn', array('reason'=>'Local file is newer than remote one', 'curr_version'=>$options['current_version'], 'next_version'=>$next_version)) && false;
+        }
+        
+        if (!copy($options['target_file'], $options['target_file'].'.bak')) {
+            $notify('warn', array('reason'=>'Backup operation failed', 'target'=>$options['target_file']));
+        }
+        
+        if (!file_put_contents($options['target_file'], $data)) {
+            $notify('warn', array('reason'=>'Failed writing to file', 'target'=>$options['target_file']));
+            $rollback = true;
+        }
+        
+        if (!$rollback && $options['try_run']) {
+            $notify('before_try', array('options'=>$options));
+            ob_start();
+            $exit = 0;
+            passthru($options['try_run_cmd'], $exit);
+            $out = ob_get_clean();
+            $notify('after_try', array('options'=>$options, 'output'=>$out, 'exitcode'=>$exit));
+            if ($exit != 0) {
+                $notify('warn', array('reason'=>'Downloaded update seems to be broken', 'output'=>$out, 'exitcode'=>$exit));
+                $rollback = true;
+            }
+        }
+        
+        if ($rollback) {
+            $notify('before_rollback', array('options'=>$options));
+            if (!rename($options['target_file'].'.bak', $options['target_file'])) {
+                return $notify('error', array('reason'=>'Rollback operation failed', 'target'=>$options['target_file'].'.bak')) && false;
+            }
+            $notify('after_rollback', array('options'=>$options));
+        } else {
+            if (!unlink($options['target_file'].'.bak')) {
+                $notify('warn', array('reason'=>'Cleanup operation failed', 'target'=>$options['target_file'].'.bak'));
+            }
+            $notify('finish', array('new_version'=>$next_version));
+        }
+
+        return null;
+    }
+
+    /**
+     * Event handler for script updater.
+     */
+    function HandleUpdateScriptEvent($event, $args = array())
+    {
+        $con = $this->console;
+        switch ($event) {
+            case 'error':
+                $con->WriteLine('['.$con->Colorize('FATAL', Console::C_RED).'] '.$args['reason']);
+                break;
+            case 'warn':
+                $con->WriteLine('['.$con->Colorize('WARNING', Console::C_YELLOW).'] '.$args['reason']);
+                break;
+            case 'version_check':
+                switch ($args['intention']) {
+                    case 'update':
+                        $con->WriteLine('Updating to '.$args['next_version'].'...');
+                        break;
+                    case 'ignore':
+                        $con->WriteLine('Already up to date');
+                        break;
+                    case 'fail':
+                        $con->WriteLine('Your version is newer');
+                        break;
+                }
+                break;
+            case 'after_download':
+                // prepends to downloaded data if current file currently uses it
+                if (substr(file_get_contents(__FILE__), 0, 14) == '#!/usr/bin/php') {
+                    $args['data'] = '#!/usr/bin/php -q'.PHP_EOL.$args['data'];
+                }
+                break;
+            case 'before_try':
+                $con->WriteLine('Testing downloaded update...');
+                break;
+            case 'finish':
+                $con->WriteLine('Update completed successfully.');
+                $con->WriteLine('Welcome to '.basename(__FILE__, '.php').' '.$args['new_version'].'!');
+                break;
+        }
+    }
+
+    protected function RunUpdater()
+    {
+        $this->UpdateScript(
+            'https://raw.github.com/uuf6429/httpdmon/master/httpdmon.php?nc='.mt_rand(),
+            array(
+                'current_version' => VERSION,
+                'try_run' => true,
+                'try_run_cmd' => 'php -f '.escapeshellarg(__FILE__).' -- '.(IS_WINDOWS?'-':'/').'v',
+                'on_event' => array($this, 'HandleUpdateScriptEvent'),
+            )
+        );
+    }
+
     public function Run()
     {
         $this->EnableCliMode();
@@ -126,34 +284,23 @@ class HttpdMon
 
         switch (true) {
             case $this->console->HasArg(array('h', '-help','?')):
-                write_line('Usage: httpdmon '.(IS_WINDOWS ? '/?' : '--help'));
-                write_line('       httpdmon '.(IS_WINDOWS ? '/u' : '--update'));
-                write_line('       httpdmon '.(IS_WINDOWS ? '/v' : '--version'));
-                write_line('       httpdmon [options]');
-                write_line('  '.str_pad(IS_WINDOWS ? '/a FILES' : '-a FILES', 27).' List of semi-colon separated access log files');
-                write_line('  '.str_pad(IS_WINDOWS ? '/c' : '-c', 27).' Make use of colors, even on Windows');
-                write_line('  '.str_pad(IS_WINDOWS ? '/d DELAY' : '-d, --delay=DELAY', 27).' Delay between updates in milliseconds (default is 100)');
-                write_line('  '.str_pad(IS_WINDOWS ? '/e FILES' : '-e FILES', 27).' List of semi-colon separated error log files');
-                write_line('  '.str_pad(IS_WINDOWS ? '/?' : '-h, --help', 27).' Show this help and exit');
-                write_line('  '.str_pad(IS_WINDOWS ? '/m' : '-m', 27).' Only show errors (and access entries with status of 400+)');
-                write_line('  '.str_pad(IS_WINDOWS ? '/r' : '-r', 27).' Resolve IP Addresses to Hostnames');
-                write_line('  '.str_pad(IS_WINDOWS ? '/t' : '-t', 27).' Force plain text (no colors)');
-                write_line('  '.str_pad(IS_WINDOWS ? '/u' : '-u, --update', 27).' Attempt program update and exit');
-                write_line('  '.str_pad(IS_WINDOWS ? '/v' : '-v, --version', 27).' Show program version and exit');
+                $this->PrintHelp();
                 break;
-            default:
-                $this->console->Clear();
-                
-                $this->errorsOnly = $this->console->HasArg('m');
-                $this->resolveIps = $this->console->HasArg('r');
-                $this->interval = ($this->console->HasArg('-delay')
-                        ? $this->console->GetArg('-delay', 100)
-                        : $this->console->GetArg('d', 100)
-                    ) * 1000;
-                $this->monitors = $this->CreateMonitors();
 
-                $this->DoMainLoop();
+            case $this->console->HasArg(array('v', '-version')):
+                $this->PrintVersion();
                 break;
+
+            case $this->console->HasArg(array('u', '-update')):
+                $this->RunUpdater();
+                break;
+
+            default:
+                $this->RunMainLoop();
+                break;
+
         }
+
+        exit(0);
     }
 }

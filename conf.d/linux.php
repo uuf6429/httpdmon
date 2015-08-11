@@ -2,19 +2,19 @@
 
 return array(
         array(
-            'type' => 'access',
+            'class' => 'AccessLogFileMonitor',
             'path' => '/var/log/httpd/access_log',
         ),
         array(
-            'type' => 'access',
+            'class' => 'AccessLogFileMonitor',
             'path' => '/var/log/apache2/access.log',
         ),
         array(
-            'type' => 'error',
+            'class' => 'ErrorLogFileMonitor',
             'path' => '/var/log/httpd/error_log',
         ),
         array(
-            'type' => 'error',
+            'class' => 'ErrorLogFileMonitor',
             'path' => '/var/log/apache2/error.log',
         ),
     );

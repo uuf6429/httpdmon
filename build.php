@@ -18,7 +18,11 @@ if (!is_dir(BUILD_PATH)) {
 $content = '<?php' . PHP_EOL;
 
 echo 'Building...' . PHP_EOL;
-foreach (array_merge(glob(SRC_SEARCH_PATH), array('boot.php')) as $file) {
+foreach (array_merge(
+    array('boot.php'),
+    glob(SRC_SEARCH_PATH),
+    array('init.php')
+) as $file) {
     echo 'Adding [' . basename($file) . ']...' . PHP_EOL;
     $content .= PHP_EOL
         . '### ' .basename($file) . PHP_EOL
@@ -26,6 +30,8 @@ foreach (array_merge(glob(SRC_SEARCH_PATH), array('boot.php')) as $file) {
         . trim(preg_replace('/<\\?php/', '', file_get_contents($file), 1)) . PHP_EOL
     ;
 }
+
+$content = implode(PHP_EOL, explode("\r", str_replace(array("\r\n", "\n"), "\r", $content)));
 
 echo 'Saving...' . PHP_EOL;
 file_put_contents(BUILD_FILE, $content);

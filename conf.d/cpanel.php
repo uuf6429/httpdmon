@@ -2,16 +2,16 @@
 
 return array(
         array(
-            'type' => 'access',
+            'class' => 'AccessLogFileMonitor',
             'path' => '/usr/local/apache/logs/access_log',
         ),
         array(
-            'type' => 'access',
+            'class' => 'AccessLogFileMonitor',
             'path' => '/home/*/access-logs/*',
             'host_parser' => '$parts = explode(\'/\', $fileName); return $parts[2];',
         ),
         array(
-            'type' => 'error',
+            'class' => 'ErrorLogFileMonitor',
             'path' => '/usr/local/apache/logs/error_log',
         ),
     );

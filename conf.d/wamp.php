@@ -2,11 +2,11 @@
 
 return array(
         array(
-            'type' => 'access',
+            'class' => 'AccessLogFileMonitor',
             'path' => 'C:\\wamp\\logs\\access.log',
         ),
         array(
-            'type' => 'error',
+            'class' => 'ErrorLogFileMonitor',
             'path' => 'C:\\wamp\\logs\\apache_error.log',
         ),
     );

@@ -2,11 +2,11 @@
 
 return array(
         array(
-            'type' => 'access',
+            'class' => 'AccessLogFileMonitor',
             'path' => 'C:\\xampp\\apache\\logs\\access.log',
         ),
         array(
-            'type' => 'error',
+            'class' => 'ErrorLogFileMonitor',
             'path' => 'C:\\xampp\\apache\\logs\\error.log',
         ),
     );
