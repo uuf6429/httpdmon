@@ -3,7 +3,7 @@
 ### boot.php
 
 // define some base constants
-define('VERSION', '2.0.1');
+define('VERSION', '2.0.2');
 define('IS_WINDOWS', strtoupper(substr(PHP_OS, 0, 3)) === 'WIN');
 
 // define our (very simplistic) autoloader
@@ -829,7 +829,7 @@ class HttpdMon
             array(
                 'current_version' => VERSION,
                 'try_run' => true,
-                'try_run_cmd' => 'php -f '.escapeshellarg(__FILE__).' -- '.(IS_WINDOWS?'-':'/').'v',
+                'try_run_cmd' => 'php -f ' . escapeshellarg(__FILE__) . ' -- ' . (IS_WINDOWS ? '-' : '/') . 'v',
                 'on_event' => array($this, 'HandleUpdateScriptEvent'),
             )
         );
@@ -894,7 +894,7 @@ $err = new ErrorHandler($con);
 $err->Attach();
 
 // load configuration
-$cfg = new Config(glob('conf.d/*.php'));
+$cfg = new Config(glob('httpdmon.d/*.php'));
 
 // run application
 $app = new HttpdMon($cfg, $con);

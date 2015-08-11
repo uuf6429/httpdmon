@@ -22,11 +22,17 @@ You can use the following shell-script to install/update this script:
 
     sudo su
     F=/usr/bin/httpdmon
-    U=https://raw.github.com/uuf6429/httpdmon/master/build/httpdmon.php
+    B=https://raw.github.com/uuf6429/httpdmon/master/
     rm -f $F
-    wget -O $F $U
+    rm -rf ${F}.d
+    wget -O $F ${B}build/httpdmon.php
     echo '#!/usr/bin/php -q'|cat - $F > /tmp/out && mv -f /tmp/out $F
     chmod +x $F
+
+To download access/error log definitions, run the following command for the desired file (replace `$NAME` accordingly):
+
+    mkdir -p ${F}.d
+    wget -O ${F}.d ${B}httpdmon.d/$NAME.php
 
 After running the above commands, you can launch the utility any time just by typing `httpdmon` on the command line.
 

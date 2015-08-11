@@ -13,7 +13,7 @@ $err = new ErrorHandler($con);
 $err->Attach();
 
 // load configuration
-$cfg = new Config(glob('conf.d/*.php'));
+$cfg = new Config(glob('httpdmon.d/*.php'));
 
 // run application
 $app = new HttpdMon($cfg, $con);
