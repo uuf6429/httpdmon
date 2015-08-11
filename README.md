@@ -22,7 +22,7 @@ You can use the following shell-script to install/update this script:
 
     sudo su
     F=/usr/bin/httpdmon
-    U=https://raw.github.com/uuf6429/httpdmon/master/httpdmon.php
+    U=https://raw.github.com/uuf6429/httpdmon/master/build/httpdmon.php
     rm -f $F
     wget -O $F $U
     echo '#!/usr/bin/php -q'|cat - $F > /tmp/out && mv -f /tmp/out $F
