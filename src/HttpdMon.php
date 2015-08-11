@@ -116,7 +116,7 @@ class HttpdMon
 
             // did user decide to quit?
             /*if (non_block_read() == 'q') {
-			exit();
+            exit();
 			}*/
             
             // give the cpu some time to breath

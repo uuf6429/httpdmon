@@ -3,7 +3,7 @@
 ### boot.php
 
 // define some base constants
-define('VERSION', '2.0.0');
+define('VERSION', '2.0.1');
 define('IS_WINDOWS', strtoupper(substr(PHP_OS, 0, 3)) === 'WIN');
 
 // define our (very simplistic) autoloader
@@ -674,7 +674,7 @@ class HttpdMon
 
             // did user decide to quit?
             /*if (non_block_read() == 'q') {
-			exit();
+            exit();
 			}*/
             
             // give the cpu some time to breath
@@ -825,7 +825,7 @@ class HttpdMon
     protected function RunUpdater()
     {
         $this->UpdateScript(
-            'https://raw.github.com/uuf6429/httpdmon/master/httpdmon.php?nc='.mt_rand(),
+            'https://raw.github.com/uuf6429/httpdmon/master/build/httpdmon.php?nc='.mt_rand(),
             array(
                 'current_version' => VERSION,
                 'try_run' => true,
