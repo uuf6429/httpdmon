@@ -271,7 +271,7 @@ class HttpdMon
             array(
                 'current_version' => VERSION,
                 'try_run' => true,
-                'try_run_cmd' => 'php -f ' . escapeshellarg(__FILE__) . ' -- ' . (IS_WINDOWS ? '-' : '/') . 'v',
+                'try_run_cmd' => 'php -f ' . escapeshellarg(__FILE__) . ' -- ' . (IS_WINDOWS ? '/' : '-') . 'v',
                 'on_event' => array($this, 'HandleUpdateScriptEvent'),
             )
         );
