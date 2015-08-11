@@ -267,7 +267,7 @@ class HttpdMon
     protected function RunUpdater()
     {
         $this->UpdateScript(
-            'https://raw.github.com/uuf6429/httpdmon/master/httpdmon.php?nc='.mt_rand(),
+            'https://raw.github.com/uuf6429/httpdmon/master/build/httpdmon.php?nc='.mt_rand(),
             array(
                 'current_version' => VERSION,
                 'try_run' => true,
