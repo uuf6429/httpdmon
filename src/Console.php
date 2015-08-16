@@ -58,55 +58,53 @@ class Console
         return false;
     }
 
-	public function GetSize($type = null)
-	{
+    public function GetSize($type = null)
+    {
         static $cache = null;
 
         if (is_null($cache)) {
-			$cache = array(
-				'c' => 20,
-				'l' => 4,
-			);
+            $cache = array(
+                'c' => 20,
+                'l' => 4,
+            );
 
             if (IS_WINDOWS) {
                 $lines = array();
                 exec('mode', $lines);
                 foreach ((array)$lines as $line) {
-                    if (strpos($line, 'Columns') !== false) {
-                        $tmp = explode(':', $line);
-						$cache['c'] = max($cache['c'], (int)trim($tmp[1]));
-                    }
-                    if (strpos($line, 'Lines') !== false) {
-                        $tmp = explode(':', $line);
-						$cache['l'] = max($cache['l'], (int)trim($tmp[1]));
+                    foreach (array('Columns' => 'c', 'Lines' => 'l') as $word => $key) {
+                        if (strpos($line, $word) !== false) {
+                            $tmp = explode(':', $line);
+                            $cache[$key] = max($cache[$key], (int)trim($tmp[1]));
+                        }
                     }
                 }
             } else {
                 $cache['c'] = max($cache['c'], (int)exec('tput cols'));
-				$cache['l'] = max($cache['l'], (int)exec('tput lines'));
+                $cache['l'] = max($cache['l'], (int)exec('tput lines'));
             }
-		}
+        }
 
-		switch($type){
-			case 'c':
-			case 'w':
-				return $cache['c'];
-			case 'l':
-			case 'h':
-				return $cache['l'];
-			default:
-				return $cache;
-		}
-	}
+        switch ($type) {
+            case 'c':
+            case 'w':
+                return $cache['c'];
+            case 'l':
+            case 'h':
+                return $cache['l'];
+            default:
+                return $cache;
+        }
+    }
 
     public function GetWidth()
     {
-		return $this->GetSize('w');
+        return $this->GetSize('w');
     }
 
     public function GetHeight()
     {
-		return $this->GetSize('h');
+        return $this->GetSize('h');
     }
 
     protected $parts = 0;

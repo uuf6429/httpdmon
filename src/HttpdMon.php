@@ -239,7 +239,6 @@ class HttpdMon
         $con = $this->console;
 
         switch ($event) {
-
             case 'error':
                 $con->WriteLine('[' . $con->Colorize('FATAL', Console::C_RED) . '] ' . $args['reason']);
                 break;
@@ -250,7 +249,6 @@ class HttpdMon
 
             case 'version_check':
                 switch ($args['intention']) {
-
                     case 'update':
                         $con->WriteLine('Updating to ' . $args['next_version'] . '...');
                         break;
@@ -304,7 +302,6 @@ class HttpdMon
         $this->ValidateCliOptions();
 
         switch (true) {
-
             case $this->console->HasArg(array('h', '-help', '?')):
                 $this->PrintHelp();
                 break;

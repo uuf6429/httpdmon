@@ -37,7 +37,7 @@ abstract class AbstractFileMonitor
     /**
      * Should parse each line into an object, returning an array of these objects.
      * @param string[] $lines Each raw line from log file.
-     * @return object[] Parsed data objects.
+     * @return object[]|ArrayObject Parsed data objects.
      */
     abstract protected function ParseChanges($lines);
 
@@ -156,8 +156,8 @@ class AccesslogFileMonitor extends AbstractFileMonitor
 {
     protected function ParseChanges($lines)
     {
-        // 78.136.44.9 - - [09/Jun/2013:04:10:45 +0100] "GET / HTTP/1.0" 200 6836 "-" "the user agent"
         $result = array();
+        // Example: 78.136.44.9 - - [09/Jun/2013:04:10:45 +0100] "GET / HTTP/1.0" 200 6836 "-" "the user agent"
         $regexp = $this->fileRegexp ? $this->fileRegexp : '/^(\S+) (\S+) (\S+) \[([^:]+):(\d+:\d+:\d+) ([^\]]+)\] \"(\S+) (.*?) (\S+)\" (\S+) (\S+) "([^"]*)" "([^"]*)"$/';
 
         foreach ($lines as $line) {
@@ -325,49 +325,54 @@ class Console
         return false;
     }
 
-    public function GetWidth()
+    public function GetSize($type = null)
     {
         static $cache = null;
+
         if (is_null($cache)) {
+            $cache = array(
+                'c' => 20,
+                'l' => 4,
+            );
+
             if (IS_WINDOWS) {
                 $lines = array();
                 exec('mode', $lines);
-                foreach ($lines as $line) {
-                    if (strpos($line, 'Columns') !== false) {
-                        $cache = explode(':', $line);
-                        $cache = (int)trim($cache[1]);
-                        break;
+                foreach ((array)$lines as $line) {
+                    foreach (array('Columns' => 'c', 'Lines' => 'l') as $word => $key) {
+                        if (strpos($line, $word) !== false) {
+                            $tmp = explode(':', $line);
+                            $cache[$key] = max($cache[$key], (int)trim($tmp[1]));
+                        }
                     }
                 }
             } else {
-                $cache = (int)exec('tput cols');
+                $cache['c'] = max($cache['c'], (int)exec('tput cols'));
+                $cache['l'] = max($cache['l'], (int)exec('tput lines'));
             }
-            $cache = max($cache, 20);
         }
-        return $cache;
+
+        switch ($type) {
+            case 'c':
+            case 'w':
+                return $cache['c'];
+            case 'l':
+            case 'h':
+                return $cache['l'];
+            default:
+                return $cache;
+        }
+    }
+
+    public function GetWidth()
+    {
+        return $this->GetSize('w');
     }
 
     public function GetHeight()
     {
-        static $cache = null;
-        if (is_null($cache)) {
-            if (IS_WINDOWS) {
-                $lines = array();
-                exec('mode', $lines);
-                foreach ($lines as $line) {
-                    if (strpos($line, 'Lines') !== false) {
-                        $cache = explode(':', $line);
-                        $cache = (int)trim($cache[1]);
-                        break;
-                    }
-                }
-            } else {
-                $cache = max(4, (int)exec('tput lines'));
-            }
-        }
-        return $cache;
+        return $this->GetSize('h');
     }
-
 
     protected $parts = 0;
     
@@ -503,7 +508,7 @@ class ErrorHandler
     public function HandleShutdown()
     {
         $err = error_get_last();
-        if ($err && !$this->handled) {
+        if (!empty($err) && !$this->handled) {
             $this->HandleError($err['type'], $err['message'], $err['file'], $err['line']);
         }
     }
@@ -525,8 +530,8 @@ class ErrorlogFileMonitor extends AbstractFileMonitor
 {
     protected function ParseChanges($lines)
     {
-        // [Tue Feb 28 11:42:31 2012] [notice] message
-        // [Tue Feb 28 14:34:41 2012] [error] [client 192.168.50.10] message
+        // Example 1: [Tue Feb 28 11:42:31 2012] [notice] message
+        // Example 2: [Tue Feb 28 14:34:41 2012] [error] [client 192.168.50.10] message
         $result = array();
         $regexp = $this->fileRegexp ? $this->fileRegexp : '/^\[([^\]]+)\] \[([^\]]+)\] (?:\[client ([^\]]+)\])?\s*(.*)$/i';
 
@@ -624,8 +629,8 @@ class HttpdMon
 
         foreach ($this->config->GetMonitorConfig() as $cfg) {
             $cls = $cfg['class'];
-            $host_parser = isset($cfg['host_parser']) ? create_function('$file,$line', $cfg['host_parser']) : null;
-            $file_parser = isset($cfg['file_parser']) ? create_function('$file,$lines', $cfg['file_parser']) : null;
+            $host_parser = isset($cfg['host_parser']) ? $cfg['host_parser'] : null; // $file, $line => string
+            $file_parser = isset($cfg['file_parser']) ? $cfg['file_parser'] : null; // $file, $lines => object[]
             $file_regexp = isset($cfg['file_regexp']) ? $cfg['file_regexp'] : null;
             foreach (glob($cfg['path']) as $file) {
                 $result[] = new $cls($file, $host_parser, $file_parser, $file_regexp);
@@ -665,10 +670,10 @@ class HttpdMon
         
         $this->errorsOnly = $this->console->HasArg('m');
         $this->resolveIps = $this->console->HasArg('r');
-        $this->interval = ($this->console->HasArg('-delay')
+        $this->interval = intval(($this->console->HasArg('-delay')
                 ? $this->console->GetArg('-delay', 100)
                 : $this->console->GetArg('d', 100)
-            ) * 1000;
+            ) * 1000);
         $this->monitors = $this->CreateMonitors();
         
         while ($this->enabled) {
@@ -700,17 +705,26 @@ class HttpdMon
     {
         // initialize
         $options = array_merge(array(
-            'current_version' => '0.0.0', // Version of the current file/script.
-            'version_regex' => '/define\\(\\s*[\'"]version[\'"]\\s*,\\s*[\'"](.*?)[\'"]\\s*\\)/i', // Regular expression for finding version in target file.
-            'try_run' => true, // Try running downloaded file to ensure it works.
-            'on_event' => create_function('', ''), // Used by updater to notify callee on event changes.
-            'target_file' => $_SERVER['SCRIPT_FILENAME'], // The file to be overwritten by the updater.
-            'force_update' => false, // Force local file to be overwritten by remote file regardless of version.
-            'try_run_cmd' => null, // Command called to verify the upgrade is fine.
+            // Version of the current file/script.
+            'current_version' => '0.0.0',
+            // Regular expression for finding version in target file.
+            'version_regex' => '/define\\(\\s*[\'"]version[\'"]\\s*,\\s*[\'"](.*?)[\'"]\\s*\\)/i',
+            // Try running downloaded file to ensure it works.
+            'try_run' => true,
+            // Used by updater to notify callee on event changes.
+            'on_event' => 'pi',
+            // The file to be overwritten by the updater.
+            'target_file' => $_SERVER['SCRIPT_FILENAME'],
+            // Force local file to be overwritten by remote file regardless of version.
+            'force_update' => false,
+            // Command called to verify the upgrade is fine.
+            'try_run_cmd' => null,
         ), (array)$options);
+
         if (is_null($options['try_run_cmd'])) { // build command with the correct target_file
             $options['try_run_cmd'] = 'php -f ' . escapeshellarg($options['target_file']);
         }
+
         $notify = $options['on_event'];
         $rollback = false;
         $next_version = null;
@@ -765,7 +779,7 @@ class HttpdMon
             passthru($options['try_run_cmd'], $exit);
             $out = ob_get_clean();
             $notify('after_try', array('options'=>$options, 'output'=>$out, 'exitcode'=>$exit));
-            if ($exit != 0) {
+            if ($exit !== 0) {
                 $notify('warn', array('reason'=>'Downloaded update seems to be broken', 'output'=>$out, 'exitcode'=>$exit));
                 $rollback = true;
             }
@@ -790,42 +804,52 @@ class HttpdMon
     /**
      * Event handler for script updater.
      */
-    function HandleUpdateScriptEvent($event, $args = array())
+    public function HandleUpdateScriptEvent($event, $args = array())
     {
         $con = $this->console;
+
         switch ($event) {
             case 'error':
                 $con->WriteLine('[' . $con->Colorize('FATAL', Console::C_RED) . '] ' . $args['reason']);
                 break;
+
             case 'warn':
                 $con->WriteLine('[' . $con->Colorize('WARNING', Console::C_YELLOW) . '] ' . $args['reason']);
                 break;
+
             case 'version_check':
                 switch ($args['intention']) {
                     case 'update':
                         $con->WriteLine('Updating to ' . $args['next_version'] . '...');
                         break;
+
                     case 'ignore':
                         $con->WriteLine('Already up to date');
                         break;
+
                     case 'fail':
                         $con->WriteLine('Your version is newer');
                         break;
+
                 }
                 break;
+
             case 'after_download':
                 // prepends to downloaded data if current file currently uses it
                 if (substr(file_get_contents(__FILE__), 0, 14) == '#!/usr/bin/php') {
                     $args['data'] = '#!/usr/bin/php -q' . PHP_EOL . $args['data'];
                 }
                 break;
+
             case 'before_try':
                 $con->WriteLine('Testing downloaded update...');
                 break;
+
             case 'finish':
                 $con->WriteLine('Update completed successfully.');
                 $con->WriteLine('Welcome to ' . basename(__FILE__, '.php') . ' ' . $args['new_version'] . '!');
                 break;
+
         }
     }
 
