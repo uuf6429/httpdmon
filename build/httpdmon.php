@@ -356,9 +356,11 @@ class Console
             case 'c':
             case 'w':
                 return $cache['c'];
+            
             case 'l':
             case 'h':
                 return $cache['l'];
+            
             default:
                 return $cache;
         }
