@@ -4,6 +4,10 @@ README
 Introduction
 ------------
 
+[![Build Status](https://scrutinizer-ci.com/g/uuf6429/httpdmon/badges/build.png?b=master)](https://scrutinizer-ci.com/g/uuf6429/httpdmon/build-status/master)
+[![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/uuf6429/httpdmon/badges/quality-score.png?b=master)](https://scrutinizer-ci.com/g/uuf6429/httpdmon/?branch=master)
+[![Code Coverage](https://scrutinizer-ci.com/g/uuf6429/httpdmon/badges/coverage.png?b=master)](https://scrutinizer-ci.com/g/uuf6429/httpdmon/?branch=master)
+
 httpdmon is a *command-line utility* based on PHP that monitors and prints information parsed from multiple Apache logfiles in (almost) realtime.
 
 Requirements
