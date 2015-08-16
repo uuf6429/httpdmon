@@ -126,7 +126,7 @@ class HttpdMon
 
     protected $UpdateScriptExitCode = 0;
 
-	public function noop(){ }
+    public function noop(){ }
 
     /**
      * Attempts to update current file from URL.
@@ -137,19 +137,19 @@ class HttpdMon
     {
         // initialize
         $options = array_merge(array(
-			// Version of the current file/script.
+            // Version of the current file/script.
             'current_version' => '0.0.0',
-			// Regular expression for finding version in target file.
+            // Regular expression for finding version in target file.
             'version_regex' => '/define\\(\\s*[\'"]version[\'"]\\s*,\\s*[\'"](.*?)[\'"]\\s*\\)/i',
-			// Try running downloaded file to ensure it works.
+            // Try running downloaded file to ensure it works.
             'try_run' => true,
-			// Used by updater to notify callee on event changes.
+            // Used by updater to notify callee on event changes.
             'on_event' => 'pi',
-			// The file to be overwritten by the updater.
+            // The file to be overwritten by the updater.
             'target_file' => $_SERVER['SCRIPT_FILENAME'],
-			// Force local file to be overwritten by remote file regardless of version.
+            // Force local file to be overwritten by remote file regardless of version.
             'force_update' => false,
-			// Command called to verify the upgrade is fine.
+            // Command called to verify the upgrade is fine.
             'try_run_cmd' => null,
         ), (array)$options);
 

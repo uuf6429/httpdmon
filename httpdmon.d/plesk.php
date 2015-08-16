@@ -1,8 +1,8 @@
 <?php
 
 function cpanel_parse_host($fileName, $line){
-	$parts = explode('/', $fileName);
-	return $parts[4];
+    $parts = explode('/', $fileName);
+    return $parts[4];
 }
 
 return array(
