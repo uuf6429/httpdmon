@@ -65,7 +65,7 @@ class Console
             if (IS_WINDOWS) {
                 $lines = array();
                 exec('mode', $lines);
-                foreach ($lines as $line) {
+                foreach ((array)$lines as $line) {
                     if (strpos($line, 'Columns') !== false) {
                         $cache = explode(':', $line);
                         $cache = (int)trim($cache[1]);
@@ -87,7 +87,7 @@ class Console
             if (IS_WINDOWS) {
                 $lines = array();
                 exec('mode', $lines);
-                foreach ($lines as $line) {
+                foreach ((array)$lines as $line) {
                     if (strpos($line, 'Lines') !== false) {
                         $cache = explode(':', $line);
                         $cache = (int)trim($cache[1]);
