@@ -23,7 +23,7 @@ abstract class AbstractFileMonitor
     /**
      * Should parse each line into an object, returning an array of these objects.
      * @param string[] $lines Each raw line from log file.
-     * @return object[] Parsed data objects.
+	 * @return object[]|ArrayObject Parsed data objects.
      */
     abstract protected function ParseChanges($lines);
 

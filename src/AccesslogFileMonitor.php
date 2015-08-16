@@ -4,8 +4,8 @@ class AccesslogFileMonitor extends AbstractFileMonitor
 {
     protected function ParseChanges($lines)
     {
-        // 78.136.44.9 - - [09/Jun/2013:04:10:45 +0100] "GET / HTTP/1.0" 200 6836 "-" "the user agent"
         $result = array();
+        // Example: 78.136.44.9 - - [09/Jun/2013:04:10:45 +0100] "GET / HTTP/1.0" 200 6836 "-" "the user agent"
         $regexp = $this->fileRegexp ? $this->fileRegexp : '/^(\S+) (\S+) (\S+) \[([^:]+):(\d+:\d+:\d+) ([^\]]+)\] \"(\S+) (.*?) (\S+)\" (\S+) (\S+) "([^"]*)" "([^"]*)"$/';
 
         foreach ($lines as $line) {

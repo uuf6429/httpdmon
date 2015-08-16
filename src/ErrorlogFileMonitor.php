@@ -4,8 +4,8 @@ class ErrorlogFileMonitor extends AbstractFileMonitor
 {
     protected function ParseChanges($lines)
     {
-        // [Tue Feb 28 11:42:31 2012] [notice] message
-        // [Tue Feb 28 14:34:41 2012] [error] [client 192.168.50.10] message
+        // Example 1: [Tue Feb 28 11:42:31 2012] [notice] message
+        // Example 2: [Tue Feb 28 14:34:41 2012] [error] [client 192.168.50.10] message
         $result = array();
         $regexp = $this->fileRegexp ? $this->fileRegexp : '/^\[([^\]]+)\] \[([^\]]+)\] (?:\[client ([^\]]+)\])?\s*(.*)$/i';
 
