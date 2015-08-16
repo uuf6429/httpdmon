@@ -1,4 +1,4 @@
-README
+Access / Error Log Monitor
 ======
 
 Introduction
