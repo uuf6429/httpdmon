@@ -58,49 +58,56 @@ class Console
         return false;
     }
 
-    public function GetWidth()
-    {
+	public function GetSize($type = null)
+	{
         static $cache = null;
+
         if (is_null($cache)) {
+			$cache = array(
+				'c' => 20,
+				'l' => 4,
+			);
+
             if (IS_WINDOWS) {
                 $lines = array();
                 exec('mode', $lines);
                 foreach ((array)$lines as $line) {
                     if (strpos($line, 'Columns') !== false) {
-                        $cache = explode(':', $line);
-                        $cache = (int)trim($cache[1]);
-                        break;
+                        $tmp = explode(':', $line);
+						$cache['c'] = max($cache['c'], (int)trim($tmp[1]));
+                    }
+                    if (strpos($line, 'Lines') !== false) {
+                        $tmp = explode(':', $line);
+						$cache['l'] = max($cache['l'], (int)trim($tmp[1]));
                     }
                 }
             } else {
-                $cache = (int)exec('tput cols');
+                $cache['c'] = max($cache['c'], (int)exec('tput cols'));
+				$cache['l'] = max($cache['l'], (int)exec('tput lines'));
             }
-            $cache = max($cache, 20);
-        }
-        return $cache;
+		}
+
+		switch($type){
+			case 'c':
+			case 'w':
+				return $cache['c'];
+			case 'l':
+			case 'h':
+				return $cache['l'];
+			default:
+				return $cache;
+		}
+	}
+
+    public function GetWidth()
+    {
+		return $this->GetSize('w');
     }
 
     public function GetHeight()
     {
-        static $cache = null;
-        if (is_null($cache)) {
-            if (IS_WINDOWS) {
-                $lines = array();
-                exec('mode', $lines);
-                foreach ((array)$lines as $line) {
-                    if (strpos($line, 'Lines') !== false) {
-                        $cache = explode(':', $line);
-                        $cache = (int)trim($cache[1]);
-                        break;
-                    }
-                }
-            } else {
-                $cache = max(4, (int)exec('tput lines'));
-            }
-        }
-        return $cache;
+		return $this->GetSize('h');
     }
-
 
     protected $parts = 0;
     
