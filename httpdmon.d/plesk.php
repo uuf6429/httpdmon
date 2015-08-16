@@ -1,6 +1,6 @@
 <?php
 
-function plesk_parse_host($fileName, $line){
+function plesk_parse_host($fileName){
     $parts = explode('/', $fileName);
     return $parts[4];
 }
