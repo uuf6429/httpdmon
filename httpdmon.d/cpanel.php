@@ -1,6 +1,6 @@
 <?php
 
-function cpanel_parse_host($fileName){
+function cpanel_parse_host($fileName) {
     $parts = explode('/', $fileName);
     return $parts[2];
 }
