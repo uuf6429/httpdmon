@@ -211,7 +211,7 @@ class HttpdMon
             passthru($options['try_run_cmd'], $exit);
             $out = ob_get_clean();
             $notify('after_try', array('options'=>$options, 'output'=>$out, 'exitcode'=>$exit));
-            if ($exit != 0) {
+            if ($exit !== 0) {
                 $notify('warn', array('reason'=>'Downloaded update seems to be broken', 'output'=>$out, 'exitcode'=>$exit));
                 $rollback = true;
             }
