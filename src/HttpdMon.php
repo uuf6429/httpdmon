@@ -126,8 +126,6 @@ class HttpdMon
 
     protected $UpdateScriptExitCode = 0;
 
-    public function noop(){ }
-
     /**
      * Attempts to update current file from URL.
      * @param string $update_url Target URL to read updates from.
