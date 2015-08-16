@@ -54,7 +54,7 @@ class ErrorHandler
     public function HandleShutdown()
     {
         $err = error_get_last();
-        if ($err && !$this->handled) {
+        if (!empty($err) && !$this->handled) {
             $this->HandleError($err['type'], $err['message'], $err['file'], $err['line']);
         }
     }
