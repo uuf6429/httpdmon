@@ -2,6 +2,10 @@
 
 class Console
 {
+    /**
+     * @param string $optname
+     * @param integer $default
+     */
     public function GetArg($optname, $default = null)
     {
         global $argv;
@@ -17,7 +21,7 @@ class Console
             }
         } else {
             // -opt val
-            $pos = array_search((IS_WINDOWS ? '/' : '-').$optname, $argv);
+            $pos = array_search((IS_WINDOWS ? '/' : '-') . $optname, $argv);
             if ($pos !== false && isset($argv[$pos + 1]) && substr($argv[$pos + 1], 0, 1) != (IS_WINDOWS ? '/' : '-')) {
                 return $argv[$pos + 1];
             }
@@ -29,7 +33,7 @@ class Console
     {
         if (IS_WINDOWS) {
             // since calling 'cls' doesn't work, we use the following hack...
-            for ($l=0; $l<$this->GetHeight(); $l++) {
+            for ($l = 0; $l < $this->GetHeight(); $l++) {
                 $this->WriteLine(str_pad('', $this->GetWidth(), ' '));
             }
         } else {
@@ -108,7 +112,7 @@ class Console
     public function WriteLine($message = '')
     {
         $this->ResetParts();
-        echo $message.PHP_EOL;
+        echo $message . PHP_EOL;
     }
     
     public function WritePart($parts)

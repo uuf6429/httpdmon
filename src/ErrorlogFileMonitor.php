@@ -7,7 +7,7 @@ class ErrorlogFileMonitor extends AbstractFileMonitor
         // [Tue Feb 28 11:42:31 2012] [notice] message
         // [Tue Feb 28 14:34:41 2012] [error] [client 192.168.50.10] message
         $result = array();
-        $regexp = $this->fileRegexp? $this->fileRegexp: '/^\[([^\]]+)\] \[([^\]]+)\] (?:\[client ([^\]]+)\])?\s*(.*)$/i';
+        $regexp = $this->fileRegexp ? $this->fileRegexp : '/^\[([^\]]+)\] \[([^\]]+)\] (?:\[client ([^\]]+)\])?\s*(.*)$/i';
 
         foreach ($lines as $line) {
             if (trim($line)) {
@@ -32,9 +32,9 @@ class ErrorlogFileMonitor extends AbstractFileMonitor
     public function Display(Console $con, $resIps, $errorsOnly)
     {
         foreach ($this->GetChangedLines() as $line) {
-            $con->WritePart('['.$con->Colorize('ERROR', Console::C_RED).']  ');
-            $con->WritePart($con->Colorize($resIps ? substr(str_pad($this->ResolveIP($line->ip), 48), 0, 48) : str_pad($line->ip, 16), Console::C_YELLOW).' ');
-            $con->WritePart($con->Colorize(str_pad($line->domain, 32), Console::C_BROWN).' ');
+            $con->WritePart('[' . $con->Colorize('ERROR', Console::C_RED) . ']  ');
+            $con->WritePart($con->Colorize($resIps ? substr(str_pad($this->ResolveIP($line->ip), 48), 0, 48) : str_pad($line->ip, 16), Console::C_YELLOW) . ' ');
+            $con->WritePart($con->Colorize(str_pad($line->domain, 32), Console::C_BROWN) . ' ');
             $long_mesg = $con->Colorize($line->message, Console::C_RED);
             //$con->WriteLine(implode(str_pad(PHP_EOL, count_parts()), str_split($long_mesg, cli_width() - count_parts())));
             $con->WriteLine($long_mesg);
