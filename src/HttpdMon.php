@@ -234,7 +234,7 @@ class HttpdMon
     /**
      * Event handler for script updater.
      */
-    function HandleUpdateScriptEvent($event, $args = array())
+    public function HandleUpdateScriptEvent($event, $args = array())
     {
         $con = $this->console;
 
