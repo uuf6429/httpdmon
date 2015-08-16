@@ -59,8 +59,8 @@ class HttpdMon
 
         foreach ($this->config->GetMonitorConfig() as $cfg) {
             $cls = $cfg['class'];
-            $host_parser = isset($cfg['host_parser']) ? create_function('$file,$line', $cfg['host_parser']) : null;
-            $file_parser = isset($cfg['file_parser']) ? create_function('$file,$lines', $cfg['file_parser']) : null;
+            $host_parser = isset($cfg['host_parser']) ? $cfg['host_parser'] : null; // $file, $line => string
+            $file_parser = isset($cfg['file_parser']) ? $cfg['file_parser'] : null; // $file, $lines => object[]
             $file_regexp = isset($cfg['file_regexp']) ? $cfg['file_regexp'] : null;
             foreach (glob($cfg['path']) as $file) {
                 $result[] = new $cls($file, $host_parser, $file_parser, $file_regexp);
@@ -126,6 +126,8 @@ class HttpdMon
 
     protected $UpdateScriptExitCode = 0;
 
+	public function noop(){ }
+
     /**
      * Attempts to update current file from URL.
      * @param string $update_url Target URL to read updates from.
@@ -135,13 +137,20 @@ class HttpdMon
     {
         // initialize
         $options = array_merge(array(
-            'current_version' => '0.0.0', // Version of the current file/script.
-            'version_regex' => '/define\\(\\s*[\'"]version[\'"]\\s*,\\s*[\'"](.*?)[\'"]\\s*\\)/i', // Regular expression for finding version in target file.
-            'try_run' => true, // Try running downloaded file to ensure it works.
-            'on_event' => create_function('', ''), // Used by updater to notify callee on event changes.
-            'target_file' => $_SERVER['SCRIPT_FILENAME'], // The file to be overwritten by the updater.
-            'force_update' => false, // Force local file to be overwritten by remote file regardless of version.
-            'try_run_cmd' => null, // Command called to verify the upgrade is fine.
+			// Version of the current file/script.
+            'current_version' => '0.0.0',
+			// Regular expression for finding version in target file.
+            'version_regex' => '/define\\(\\s*[\'"]version[\'"]\\s*,\\s*[\'"](.*?)[\'"]\\s*\\)/i',
+			// Try running downloaded file to ensure it works.
+            'try_run' => true,
+			// Used by updater to notify callee on event changes.
+            'on_event' => 'pi',
+			// The file to be overwritten by the updater.
+            'target_file' => $_SERVER['SCRIPT_FILENAME'],
+			// Force local file to be overwritten by remote file regardless of version.
+            'force_update' => false,
+			// Command called to verify the upgrade is fine.
+            'try_run_cmd' => null,
         ), (array)$options);
 
         if (is_null($options['try_run_cmd'])) { // build command with the correct target_file

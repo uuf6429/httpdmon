@@ -1,5 +1,10 @@
 <?php
 
+function cpanel_parse_host($fileName, $line){
+	$parts = explode('/', $fileName);
+	return $parts[2];
+}
+
 return array(
         array(
             'class' => 'AccessLogFileMonitor',
@@ -8,7 +13,7 @@ return array(
         array(
             'class' => 'AccessLogFileMonitor',
             'path' => '/home/*/access-logs/*',
-            'host_parser' => '$parts = explode(\'/\', $fileName); return $parts[2];',
+            'host_parser' => 'cpanel_parse_host',
         ),
         array(
             'class' => 'ErrorLogFileMonitor',
