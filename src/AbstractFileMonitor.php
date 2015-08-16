@@ -118,6 +118,9 @@ abstract class AbstractFileMonitor
         return $fn ? $fn($this->file, $lines) : $this->ParseChanges($lines);
     }
     
+    /**
+     * @return string
+     */
     protected function ResolveIP($ip)
     {
         static $cache = array();

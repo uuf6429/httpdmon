@@ -27,7 +27,7 @@ class ErrorHandler
      */
     public function HandleError($code, $mesg, $file = 'unknown', $line = 0)
     {
-        $this->handled=true;
+        $this->handled = true;
         $this->HandleException(new ErrorException($mesg, $code, 1, $file, $line));
     }
     
@@ -37,10 +37,10 @@ class ErrorHandler
      */
     public function HandleException(Exception $e)
     {
-        $this->handled=true;
+        $this->handled = true;
         $con = $this->console;
         $con->WriteLine();
-        $con->WriteLine('[' . $con->Colorize('FATAL', 'red') . '] ' . $e->getMessage() . ' (error ' . $e->getCode() . ', '.basename($e->getFile()).':' . $e->getLine() . ')');
+        $con->WriteLine('[' . $con->Colorize('FATAL', 'red') . '] ' . $e->getMessage() . ' (error ' . $e->getCode() . ', ' . basename($e->getFile()) . ':' . $e->getLine() . ')');
         
         $con->WriteLine('Press [ENTER] to continue...');
         $con->ReadLine();

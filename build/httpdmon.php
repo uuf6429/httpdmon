@@ -132,6 +132,9 @@ abstract class AbstractFileMonitor
         return $fn ? $fn($this->file, $lines) : $this->ParseChanges($lines);
     }
     
+    /**
+     * @return string
+     */
     protected function ResolveIP($ip)
     {
         static $cache = array();
@@ -155,7 +158,7 @@ class AccesslogFileMonitor extends AbstractFileMonitor
     {
         // 78.136.44.9 - - [09/Jun/2013:04:10:45 +0100] "GET / HTTP/1.0" 200 6836 "-" "the user agent"
         $result = array();
-        $regexp = $this->fileRegexp? $this->fileRegexp: '/^(\S+) (\S+) (\S+) \[([^:]+):(\d+:\d+:\d+) ([^\]]+)\] \"(\S+) (.*?) (\S+)\" (\S+) (\S+) "([^"]*)" "([^"]*)"$/';
+        $regexp = $this->fileRegexp ? $this->fileRegexp : '/^(\S+) (\S+) (\S+) \[([^:]+):(\d+:\d+:\d+) ([^\]]+)\] \"(\S+) (.*?) (\S+)\" (\S+) (\S+) "([^"]*)" "([^"]*)"$/';
 
         foreach ($lines as $line) {
             if (trim($line)) {
@@ -192,15 +195,15 @@ class AccesslogFileMonitor extends AbstractFileMonitor
             if ($errorsOnly && $line->code < 400) {
                 continue; // not an error entry, go to next one
             }
-            $con->WritePart('['.$con->Colorize('ACCESS', Console::C_CYAN).'] ');
-            $con->WritePart($con->Colorize($resIps ? substr(str_pad(resolve_ip($line->ip), 48), 0, 48) : str_pad($line->ip, 16), Console::C_YELLOW).' ');
-            $con->WritePart($con->Colorize(str_pad($line->domain, 32), Console::C_BROWN).' ');
+            $con->WritePart('[' . $con->Colorize('ACCESS', Console::C_CYAN) . '] ');
+            $con->WritePart($con->Colorize($resIps ? substr(str_pad(resolve_ip($line->ip), 48), 0, 48) : str_pad($line->ip, 16), Console::C_YELLOW) . ' ');
+            $con->WritePart($con->Colorize(str_pad($line->domain, 32), Console::C_BROWN) . ' ');
             $con->WritePart($con->Colorize(str_pad($line->method, 8), Console::C_LIGHT_PURPLE));
             $long_mesg = ''
                 . $con->Colorize(str_replace('&', $con->Colorize('&', Console::C_DARK_GRAY), $line->url), Console::C_WHITE)
                 . $con->Colorize(' > ', Console::C_DARK_GRAY)
                 . $con->Colorize($line->code, $line->code < 400 ? Console::C_GREEN : Console::C_RED)
-                . $con->Colorize(' (', Console::C_DARK_GRAY).$con->Colorize($line->size, Console::C_WHITE).$con->Colorize(' bytes)', Console::C_DARK_GRAY)
+                . $con->Colorize(' (', Console::C_DARK_GRAY) . $con->Colorize($line->size, Console::C_WHITE) . $con->Colorize(' bytes)', Console::C_DARK_GRAY)
             ;
             //write_line(implode(str_pad(PHP_EOL, count_parts()), str_split($long_mesg, cli_width() - count_parts())));
             $con->WriteLine($long_mesg);
@@ -240,7 +243,7 @@ class Config
             array(
                     '<?php',
                     PHP_EOL,
-                    'return '.var_export($this->config[$file], true).';',
+                    'return ' . var_export($this->config[$file], true) . ';',
                     PHP_EOL,
                     '?>'
                 )
@@ -266,6 +269,10 @@ class Config
 
 class Console
 {
+    /**
+     * @param string $optname
+     * @param integer $default
+     */
     public function GetArg($optname, $default = null)
     {
         global $argv;
@@ -281,7 +288,7 @@ class Console
             }
         } else {
             // -opt val
-            $pos = array_search((IS_WINDOWS ? '/' : '-').$optname, $argv);
+            $pos = array_search((IS_WINDOWS ? '/' : '-') . $optname, $argv);
             if ($pos !== false && isset($argv[$pos + 1]) && substr($argv[$pos + 1], 0, 1) != (IS_WINDOWS ? '/' : '-')) {
                 return $argv[$pos + 1];
             }
@@ -293,7 +300,7 @@ class Console
     {
         if (IS_WINDOWS) {
             // since calling 'cls' doesn't work, we use the following hack...
-            for ($l=0; $l<$this->GetHeight(); $l++) {
+            for ($l = 0; $l < $this->GetHeight(); $l++) {
                 $this->WriteLine(str_pad('', $this->GetWidth(), ' '));
             }
         } else {
@@ -372,7 +379,7 @@ class Console
     public function WriteLine($message = '')
     {
         $this->ResetParts();
-        echo $message.PHP_EOL;
+        echo $message . PHP_EOL;
     }
     
     public function WritePart($parts)
@@ -469,7 +476,7 @@ class ErrorHandler
      */
     public function HandleError($code, $mesg, $file = 'unknown', $line = 0)
     {
-        $this->handled=true;
+        $this->handled = true;
         $this->HandleException(new ErrorException($mesg, $code, 1, $file, $line));
     }
     
@@ -479,10 +486,10 @@ class ErrorHandler
      */
     public function HandleException(Exception $e)
     {
-        $this->handled=true;
+        $this->handled = true;
         $con = $this->console;
         $con->WriteLine();
-        $con->WriteLine('[' . $con->Colorize('FATAL', 'red') . '] ' . $e->getMessage() . ' (error ' . $e->getCode() . ', '.basename($e->getFile()).':' . $e->getLine() . ')');
+        $con->WriteLine('[' . $con->Colorize('FATAL', 'red') . '] ' . $e->getMessage() . ' (error ' . $e->getCode() . ', ' . basename($e->getFile()) . ':' . $e->getLine() . ')');
         
         $con->WriteLine('Press [ENTER] to continue...');
         $con->ReadLine();
@@ -521,7 +528,7 @@ class ErrorlogFileMonitor extends AbstractFileMonitor
         // [Tue Feb 28 11:42:31 2012] [notice] message
         // [Tue Feb 28 14:34:41 2012] [error] [client 192.168.50.10] message
         $result = array();
-        $regexp = $this->fileRegexp? $this->fileRegexp: '/^\[([^\]]+)\] \[([^\]]+)\] (?:\[client ([^\]]+)\])?\s*(.*)$/i';
+        $regexp = $this->fileRegexp ? $this->fileRegexp : '/^\[([^\]]+)\] \[([^\]]+)\] (?:\[client ([^\]]+)\])?\s*(.*)$/i';
 
         foreach ($lines as $line) {
             if (trim($line)) {
@@ -546,9 +553,9 @@ class ErrorlogFileMonitor extends AbstractFileMonitor
     public function Display(Console $con, $resIps, $errorsOnly)
     {
         foreach ($this->GetChangedLines() as $line) {
-            $con->WritePart('['.$con->Colorize('ERROR', Console::C_RED).']  ');
-            $con->WritePart($con->Colorize($resIps ? substr(str_pad($this->ResolveIP($line->ip), 48), 0, 48) : str_pad($line->ip, 16), Console::C_YELLOW).' ');
-            $con->WritePart($con->Colorize(str_pad($line->domain, 32), Console::C_BROWN).' ');
+            $con->WritePart('[' . $con->Colorize('ERROR', Console::C_RED) . ']  ');
+            $con->WritePart($con->Colorize($resIps ? substr(str_pad($this->ResolveIP($line->ip), 48), 0, 48) : str_pad($line->ip, 16), Console::C_YELLOW) . ' ');
+            $con->WritePart($con->Colorize(str_pad($line->domain, 32), Console::C_BROWN) . ' ');
             $long_mesg = $con->Colorize($line->message, Console::C_RED);
             //$con->WriteLine(implode(str_pad(PHP_EOL, count_parts()), str_split($long_mesg, cli_width() - count_parts())));
             $con->WriteLine($long_mesg);
@@ -631,18 +638,18 @@ class HttpdMon
     protected function PrintHelp()
     {
         $con = $this->console;
-        $con->WriteLine('Usage: httpdmon '.(IS_WINDOWS ? '/?' : '--help'));
-        $con->WriteLine('       httpdmon '.(IS_WINDOWS ? '/u' : '--update'));
-        $con->WriteLine('       httpdmon '.(IS_WINDOWS ? '/v' : '--version'));
+        $con->WriteLine('Usage: httpdmon ' . (IS_WINDOWS ? '/?' : '--help'));
+        $con->WriteLine('       httpdmon ' . (IS_WINDOWS ? '/u' : '--update'));
+        $con->WriteLine('       httpdmon ' . (IS_WINDOWS ? '/v' : '--version'));
         $con->WriteLine('       httpdmon [options]');
-        $con->WriteLine('  '.str_pad(IS_WINDOWS ? '/c' : '-c', 27).' Make use of colors, even on Windows (requires ansicon or similar)');
-        $con->WriteLine('  '.str_pad(IS_WINDOWS ? '/d DELAY' : '-d, --delay=DELAY', 27).' Delay between updates in milliseconds (default is 100)');
-        $con->WriteLine('  '.str_pad(IS_WINDOWS ? '/?' : '-h, --help', 27).' Show this help and exit');
-        $con->WriteLine('  '.str_pad(IS_WINDOWS ? '/m' : '-m', 27).' Only show errors (and access entries with status of 400+)');
-        $con->WriteLine('  '.str_pad(IS_WINDOWS ? '/r' : '-r', 27).' Resolve IP Addresses to Hostnames');
-        $con->WriteLine('  '.str_pad(IS_WINDOWS ? '/t' : '-t', 27).' Force plain text (no colors)');
-        $con->WriteLine('  '.str_pad(IS_WINDOWS ? '/u' : '-u, --update', 27).' Attempt program update and exit');
-        $con->WriteLine('  '.str_pad(IS_WINDOWS ? '/v' : '-v, --version', 27).' Show program version and exit');
+        $con->WriteLine('  ' . str_pad(IS_WINDOWS ? '/c' : '-c', 27) . ' Make use of colors, even on Windows (requires ansicon or similar)');
+        $con->WriteLine('  ' . str_pad(IS_WINDOWS ? '/d DELAY' : '-d, --delay=DELAY', 27) . ' Delay between updates in milliseconds (default is 100)');
+        $con->WriteLine('  ' . str_pad(IS_WINDOWS ? '/?' : '-h, --help', 27) . ' Show this help and exit');
+        $con->WriteLine('  ' . str_pad(IS_WINDOWS ? '/m' : '-m', 27) . ' Only show errors (and access entries with status of 400+)');
+        $con->WriteLine('  ' . str_pad(IS_WINDOWS ? '/r' : '-r', 27) . ' Resolve IP Addresses to Hostnames');
+        $con->WriteLine('  ' . str_pad(IS_WINDOWS ? '/t' : '-t', 27) . ' Force plain text (no colors)');
+        $con->WriteLine('  ' . str_pad(IS_WINDOWS ? '/u' : '-u, --update', 27) . ' Attempt program update and exit');
+        $con->WriteLine('  ' . str_pad(IS_WINDOWS ? '/v' : '-v, --version', 27) . ' Show program version and exit');
     }
 
     protected function PrintVersion()
@@ -693,21 +700,21 @@ class HttpdMon
     {
         // initialize
         $options = array_merge(array(
-            'current_version' => '0.0.0',                                                           // Version of the current file/script.
-            'version_regex' => '/define\\(\\s*[\'"]version[\'"]\\s*,\\s*[\'"](.*?)[\'"]\\s*\\)/i',  // Regular expression for finding version in target file.
-            'try_run' => true,                                                                      // Try running downloaded file to ensure it works.
-            'on_event' => create_function('', ''),                                                  // Used by updater to notify callee on event changes.
-            'target_file' => $_SERVER['SCRIPT_FILENAME'],                                           // The file to be overwritten by the updater.
-            'force_update' => false,                                                                // Force local file to be overwritten by remote file regardless of version.
-            'try_run_cmd' => null,                                                                  // Command called to verify the upgrade is fine.
+            'current_version' => '0.0.0', // Version of the current file/script.
+            'version_regex' => '/define\\(\\s*[\'"]version[\'"]\\s*,\\s*[\'"](.*?)[\'"]\\s*\\)/i', // Regular expression for finding version in target file.
+            'try_run' => true, // Try running downloaded file to ensure it works.
+            'on_event' => create_function('', ''), // Used by updater to notify callee on event changes.
+            'target_file' => $_SERVER['SCRIPT_FILENAME'], // The file to be overwritten by the updater.
+            'force_update' => false, // Force local file to be overwritten by remote file regardless of version.
+            'try_run_cmd' => null, // Command called to verify the upgrade is fine.
         ), (array)$options);
         if (is_null($options['try_run_cmd'])) { // build command with the correct target_file
-            $options['try_run_cmd'] = 'php -f '.escapeshellarg($options['target_file']);
+            $options['try_run_cmd'] = 'php -f ' . escapeshellarg($options['target_file']);
         }
         $notify = $options['on_event'];
         $rollback = false;
         $next_version = null;
-        static $intentions = array(-1=>'fail',0=>'ignore',1=>'update');
+        static $intentions = array(-1=>'fail', 0=>'ignore', 1=>'update');
         
         // process
         $notify('start');
@@ -742,7 +749,7 @@ class HttpdMon
             return $notify('warn', array('reason'=>'Local file is newer than remote one', 'curr_version'=>$options['current_version'], 'next_version'=>$next_version)) && false;
         }
         
-        if (!copy($options['target_file'], $options['target_file'].'.bak')) {
+        if (!copy($options['target_file'], $options['target_file'] . '.bak')) {
             $notify('warn', array('reason'=>'Backup operation failed', 'target'=>$options['target_file']));
         }
         
@@ -766,13 +773,13 @@ class HttpdMon
         
         if ($rollback) {
             $notify('before_rollback', array('options'=>$options));
-            if (!rename($options['target_file'].'.bak', $options['target_file'])) {
-                return $notify('error', array('reason'=>'Rollback operation failed', 'target'=>$options['target_file'].'.bak')) && false;
+            if (!rename($options['target_file'] . '.bak', $options['target_file'])) {
+                return $notify('error', array('reason'=>'Rollback operation failed', 'target'=>$options['target_file'] . '.bak')) && false;
             }
             $notify('after_rollback', array('options'=>$options));
         } else {
-            if (!unlink($options['target_file'].'.bak')) {
-                $notify('warn', array('reason'=>'Cleanup operation failed', 'target'=>$options['target_file'].'.bak'));
+            if (!unlink($options['target_file'] . '.bak')) {
+                $notify('warn', array('reason'=>'Cleanup operation failed', 'target'=>$options['target_file'] . '.bak'));
             }
             $notify('finish', array('new_version'=>$next_version));
         }
@@ -788,15 +795,15 @@ class HttpdMon
         $con = $this->console;
         switch ($event) {
             case 'error':
-                $con->WriteLine('['.$con->Colorize('FATAL', Console::C_RED).'] '.$args['reason']);
+                $con->WriteLine('[' . $con->Colorize('FATAL', Console::C_RED) . '] ' . $args['reason']);
                 break;
             case 'warn':
-                $con->WriteLine('['.$con->Colorize('WARNING', Console::C_YELLOW).'] '.$args['reason']);
+                $con->WriteLine('[' . $con->Colorize('WARNING', Console::C_YELLOW) . '] ' . $args['reason']);
                 break;
             case 'version_check':
                 switch ($args['intention']) {
                     case 'update':
-                        $con->WriteLine('Updating to '.$args['next_version'].'...');
+                        $con->WriteLine('Updating to ' . $args['next_version'] . '...');
                         break;
                     case 'ignore':
                         $con->WriteLine('Already up to date');
@@ -809,7 +816,7 @@ class HttpdMon
             case 'after_download':
                 // prepends to downloaded data if current file currently uses it
                 if (substr(file_get_contents(__FILE__), 0, 14) == '#!/usr/bin/php') {
-                    $args['data'] = '#!/usr/bin/php -q'.PHP_EOL.$args['data'];
+                    $args['data'] = '#!/usr/bin/php -q' . PHP_EOL . $args['data'];
                 }
                 break;
             case 'before_try':
@@ -817,7 +824,7 @@ class HttpdMon
                 break;
             case 'finish':
                 $con->WriteLine('Update completed successfully.');
-                $con->WriteLine('Welcome to '.basename(__FILE__, '.php').' '.$args['new_version'].'!');
+                $con->WriteLine('Welcome to ' . basename(__FILE__, '.php') . ' ' . $args['new_version'] . '!');
                 break;
         }
     }
@@ -825,7 +832,7 @@ class HttpdMon
     protected function RunUpdater()
     {
         $this->UpdateScript(
-            'https://raw.github.com/uuf6429/httpdmon/master/build/httpdmon.php?nc='.mt_rand(),
+            'https://raw.github.com/uuf6429/httpdmon/master/build/httpdmon.php?nc=' . mt_rand(),
             array(
                 'current_version' => VERSION,
                 'try_run' => true,
@@ -841,7 +848,7 @@ class HttpdMon
         $this->ValidateCliOptions();
 
         switch (true) {
-            case $this->console->HasArg(array('h', '-help','?')):
+            case $this->console->HasArg(array('h', '-help', '?')):
                 $this->PrintHelp();
                 break;
 

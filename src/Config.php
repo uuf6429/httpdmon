@@ -30,7 +30,7 @@ class Config
             array(
                     '<?php',
                     PHP_EOL,
-                    'return '.var_export($this->config[$file], true).';',
+                    'return ' . var_export($this->config[$file], true) . ';',
                     PHP_EOL,
                     '?>'
                 )

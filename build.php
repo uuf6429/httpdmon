@@ -25,7 +25,7 @@ foreach (array_merge(
 ) as $file) {
     echo 'Adding [' . basename($file) . ']...' . PHP_EOL;
     $content .= PHP_EOL
-        . '### ' .basename($file) . PHP_EOL
+        . '### ' . basename($file) . PHP_EOL
         . PHP_EOL
         . trim(preg_replace('/<\\?php/', '', file_get_contents($file), 1)) . PHP_EOL
     ;
