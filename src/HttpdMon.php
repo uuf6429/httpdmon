@@ -100,10 +100,10 @@ class HttpdMon
         
         $this->errorsOnly = $this->console->HasArg('m');
         $this->resolveIps = $this->console->HasArg('r');
-        $this->interval = ($this->console->HasArg('-delay')
+        $this->interval = intval(($this->console->HasArg('-delay')
                 ? $this->console->GetArg('-delay', 100)
                 : $this->console->GetArg('d', 100)
-            ) * 1000;
+            ) * 1000);
         $this->monitors = $this->CreateMonitors();
         
         while ($this->enabled) {
@@ -143,9 +143,11 @@ class HttpdMon
             'force_update' => false, // Force local file to be overwritten by remote file regardless of version.
             'try_run_cmd' => null, // Command called to verify the upgrade is fine.
         ), (array)$options);
+
         if (is_null($options['try_run_cmd'])) { // build command with the correct target_file
             $options['try_run_cmd'] = 'php -f ' . escapeshellarg($options['target_file']);
         }
+
         $notify = $options['on_event'];
         $rollback = false;
         $next_version = null;
@@ -228,39 +230,51 @@ class HttpdMon
     function HandleUpdateScriptEvent($event, $args = array())
     {
         $con = $this->console;
+
         switch ($event) {
+
             case 'error':
                 $con->WriteLine('[' . $con->Colorize('FATAL', Console::C_RED) . '] ' . $args['reason']);
                 break;
+
             case 'warn':
                 $con->WriteLine('[' . $con->Colorize('WARNING', Console::C_YELLOW) . '] ' . $args['reason']);
                 break;
+
             case 'version_check':
                 switch ($args['intention']) {
+
                     case 'update':
                         $con->WriteLine('Updating to ' . $args['next_version'] . '...');
                         break;
+
                     case 'ignore':
                         $con->WriteLine('Already up to date');
                         break;
+
                     case 'fail':
                         $con->WriteLine('Your version is newer');
                         break;
+
                 }
                 break;
+
             case 'after_download':
                 // prepends to downloaded data if current file currently uses it
                 if (substr(file_get_contents(__FILE__), 0, 14) == '#!/usr/bin/php') {
                     $args['data'] = '#!/usr/bin/php -q' . PHP_EOL . $args['data'];
                 }
                 break;
+
             case 'before_try':
                 $con->WriteLine('Testing downloaded update...');
                 break;
+
             case 'finish':
                 $con->WriteLine('Update completed successfully.');
                 $con->WriteLine('Welcome to ' . basename(__FILE__, '.php') . ' ' . $args['new_version'] . '!');
                 break;
+
         }
     }
 
@@ -283,6 +297,7 @@ class HttpdMon
         $this->ValidateCliOptions();
 
         switch (true) {
+
             case $this->console->HasArg(array('h', '-help', '?')):
                 $this->PrintHelp();
                 break;
