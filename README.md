@@ -33,10 +33,11 @@ You can use the following shell-script to install/update this script:
     echo '#!/usr/bin/php -q'|cat - $F > /tmp/out && mv -f /tmp/out $F
     chmod +x $F
 
-To download access/error log definitions, run the following command for the desired file (replace `$NAME` accordingly):
+To download access/error log definitions, run the following command for the desired file (replace `$NAME` with the definition file name):
 
     mkdir -p ${F}.d
-    wget -O ${F}.d ${B}httpdmon.d/$NAME.php
+    D=$NAME
+    wget -O ${F}.d/$D ${B}httpdmon.d/$D
 
 After running the above commands, you can launch the utility any time just by typing `httpdmon` on the command line.
 
