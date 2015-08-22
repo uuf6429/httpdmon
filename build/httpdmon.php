@@ -3,7 +3,7 @@
 ### boot.php
 
 // define some base constants
-define('VERSION', '2.0.3');
+define('VERSION', '2.0.4');
 define('IS_WINDOWS', strtoupper(substr(PHP_OS, 0, 3)) === 'WIN');
 
 // define our (very simplistic) autoloader
@@ -502,10 +502,6 @@ class ErrorHandler
         $con = $this->console;
         $con->WriteLine();
         $con->WriteLine('[' . $con->Colorize('FATAL', 'red') . '] ' . $e->getMessage() . ' (error ' . $e->getCode() . ', ' . basename($e->getFile()) . ':' . $e->getLine() . ')');
-        
-        $con->WriteLine('Press [ENTER] to continue...');
-        $con->ReadLine();
-
         exit(1); // yeah something broke...
     }
 

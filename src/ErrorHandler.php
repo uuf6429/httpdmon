@@ -41,10 +41,6 @@ class ErrorHandler
         $con = $this->console;
         $con->WriteLine();
         $con->WriteLine('[' . $con->Colorize('FATAL', 'red') . '] ' . $e->getMessage() . ' (error ' . $e->getCode() . ', ' . basename($e->getFile()) . ':' . $e->getLine() . ')');
-        
-        $con->WriteLine('Press [ENTER] to continue...');
-        $con->ReadLine();
-
         exit(1); // yeah something broke...
     }
 
