@@ -16,6 +16,11 @@ class Config
         return realpath($file);
     }
 
+    public function IsEmpty()
+    {
+        return !count($this->config);
+    }
+
     public function Load($file)
     {
         $file = $this->GetRealFile($file);

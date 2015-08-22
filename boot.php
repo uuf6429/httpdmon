@@ -1,7 +1,7 @@
 <?php
 
 // define some base constants
-define('VERSION', '2.0.2');
+define('VERSION', '2.0.3');
 define('IS_WINDOWS', strtoupper(substr(PHP_OS, 0, 3)) === 'WIN');
 
 // define our (very simplistic) autoloader

@@ -3,7 +3,7 @@
 ### boot.php
 
 // define some base constants
-define('VERSION', '2.0.2');
+define('VERSION', '2.0.3');
 define('IS_WINDOWS', strtoupper(substr(PHP_OS, 0, 3)) === 'WIN');
 
 // define our (very simplistic) autoloader
@@ -229,6 +229,11 @@ class Config
         return realpath($file);
     }
 
+    public function IsEmpty()
+    {
+        return !count($this->config);
+    }
+
     public function Load($file)
     {
         $file = $this->GetRealFile($file);
@@ -271,7 +276,7 @@ class Console
 {
     /**
      * @param string $optname
-     * @param integer $default
+     * @param mixed $default
      */
     public function GetArg($optname, $default = null)
     {
@@ -652,6 +657,7 @@ class HttpdMon
         $con->WriteLine('  ' . str_pad(IS_WINDOWS ? '/c' : '-c', 27) . ' Make use of colors, even on Windows (requires ansicon or similar)');
         $con->WriteLine('  ' . str_pad(IS_WINDOWS ? '/d DELAY' : '-d, --delay=DELAY', 27) . ' Delay between updates in milliseconds (default is 100)');
         $con->WriteLine('  ' . str_pad(IS_WINDOWS ? '/?' : '-h, --help', 27) . ' Show this help and exit');
+        $con->WriteLine('  ' . str_pad(IS_WINDOWS ? '/i PATH' : '-i PATH', 27) . ' Specify wildcard path to load config from');
         $con->WriteLine('  ' . str_pad(IS_WINDOWS ? '/m' : '-m', 27) . ' Only show errors (and access entries with status of 400+)');
         $con->WriteLine('  ' . str_pad(IS_WINDOWS ? '/r' : '-r', 27) . ' Resolve IP Addresses to Hostnames');
         $con->WriteLine('  ' . str_pad(IS_WINDOWS ? '/t' : '-t', 27) . ' Force plain text (no colors)');
@@ -668,6 +674,10 @@ class HttpdMon
 
     protected function RunMainLoop()
     {
+        if ($this->config->IsEmpty()) {
+            throw new Exception('No configuration loaded.');
+        }
+
         $this->console->Clear();
         
         $this->errorsOnly = $this->console->HasArg('m');
@@ -889,7 +899,6 @@ class HttpdMon
             default:
                 $this->RunMainLoop();
                 break;
-
         }
 
         exit(0);
@@ -927,7 +936,9 @@ $err = new ErrorHandler($con);
 $err->Attach();
 
 // load configuration
-$cfg = new Config(glob('httpdmon.d/*.php'));
+$cfg = new Config(glob(
+    $con->GetArg('i', __DIR__ . '/httpdmon.d/*.php')
+));
 
 // run application
 $app = new HttpdMon($cfg, $con);

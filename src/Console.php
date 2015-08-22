@@ -4,7 +4,7 @@ class Console
 {
     /**
      * @param string $optname
-     * @param integer $default
+     * @param mixed $default
      */
     public function GetArg($optname, $default = null)
     {
