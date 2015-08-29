@@ -132,10 +132,10 @@ class HttpdMon
     protected function RunUpdater()
     {
         $updater = new Updater();
-        $updater->UpdateUrl='https://raw.github.com/uuf6429/httpdmon/master/build/httpdmon.php?nc=' . mt_rand();
-        $updater->LocalVersion =VERSION;
-        $updater->TryRunCmd='php -f ' . escapeshellarg(__FILE__) . ' -- ' . (IS_WINDOWS ? '/' : '-') . 'v';
-        $updater->EventHandler=array($this, 'HandleUpdateScriptEvent');
+        $updater->UpdateUrl = 'https://raw.github.com/uuf6429/httpdmon/master/build/httpdmon.php?nc=' . mt_rand();
+        $updater->LocalVersion = VERSION;
+        $updater->TryRunCmd = 'php -f ' . escapeshellarg(__FILE__) . ' -- ' . (IS_WINDOWS ? '/' : '-') . 'v';
+        $updater->EventHandler = array($this, 'HandleUpdateScriptEvent');
         $updater->Run();
     }
 
