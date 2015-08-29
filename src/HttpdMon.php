@@ -129,111 +129,14 @@ class HttpdMon
         }
     }
 
-    protected $UpdateScriptExitCode = 0;
-
-    /**
-     * Attempts to update current file from URL.
-     * @param string $update_url Target URL to read updates from.
-     * @param array|object $options Array of options (see docs for more info).
-     */
-    protected function UpdateScript($update_url, $options)
+    protected function RunUpdater()
     {
-        // initialize
-        $options = array_merge(array(
-            // Version of the current file/script.
-            'current_version' => '0.0.0',
-            // Regular expression for finding version in target file.
-            'version_regex' => '/define\\(\\s*[\'"]version[\'"]\\s*,\\s*[\'"](.*?)[\'"]\\s*\\)/i',
-            // Try running downloaded file to ensure it works.
-            'try_run' => true,
-            // Used by updater to notify callee on event changes.
-            'on_event' => 'pi',
-            // The file to be overwritten by the updater.
-            'target_file' => $_SERVER['SCRIPT_FILENAME'],
-            // Force local file to be overwritten by remote file regardless of version.
-            'force_update' => false,
-            // Command called to verify the upgrade is fine.
-            'try_run_cmd' => null,
-        ), (array)$options);
-
-        if (is_null($options['try_run_cmd'])) { // build command with the correct target_file
-            $options['try_run_cmd'] = 'php -f ' . escapeshellarg($options['target_file']);
-        }
-
-        $notify = $options['on_event'];
-        $rollback = false;
-        $next_version = null;
-        static $intentions = array(-1=>'fail', 0=>'ignore', 1=>'update');
-        
-        // process
-        $notify('start');
-        $notify('before_download', array('url'=>$update_url));
-        
-        if (!($data = file_get_contents($update_url))) {
-            return $notify('error', array('reason'=>'File download failed', 'target'=>$update_url)) && false;
-        }
-        
-        $notify('after_download', array('data'=>&$data));
-        
-        if (!preg_match($options['version_regex'], $data, $next_version)) {
-            return $notify('error', array('reason'=>'Could not determine version of target file', 'target'=>$data, 'result'=>$next_version)) && false;
-        }
-        
-        if (!($next_version = array_pop($next_version))) {
-            return $notify('error', array('reason'=>'Version of target file is empty', 'target'=>$data, 'result'=>$next_version)) && false;
-        }
-        
-        $v_diff = version_compare($next_version, $options['current_version']);
-        $should_fail = $notify('version_check', array('intention'=>$intentions[$v_diff], 'curr_version'=>$options['current_version'], 'next_version'=>$next_version));
-        
-        if ($should_fail === false) {
-            return $notify('error', array('reason'=>'Update cancelled by user code')) && false;
-        }
-        
-        if ($v_diff === 0 && !$options['force_update']) {
-            return $notify('already_uptodate') && false;
-        }
-        
-        if ($v_diff === -1 && !$options['force_update']) {
-            return $notify('warn', array('reason'=>'Local file is newer than remote one', 'curr_version'=>$options['current_version'], 'next_version'=>$next_version)) && false;
-        }
-        
-        if (!copy($options['target_file'], $options['target_file'] . '.bak')) {
-            $notify('warn', array('reason'=>'Backup operation failed', 'target'=>$options['target_file']));
-        }
-        
-        if (!file_put_contents($options['target_file'], $data)) {
-            $notify('warn', array('reason'=>'Failed writing to file', 'target'=>$options['target_file']));
-            $rollback = true;
-        }
-        
-        if (!$rollback && $options['try_run']) {
-            $notify('before_try', array('options'=>$options));
-            ob_start();
-            $exit = 0;
-            passthru($options['try_run_cmd'], $exit);
-            $out = ob_get_clean();
-            $notify('after_try', array('options'=>$options, 'output'=>$out, 'exitcode'=>$exit));
-            if ($exit !== 0) {
-                $notify('warn', array('reason'=>'Downloaded update seems to be broken', 'output'=>$out, 'exitcode'=>$exit));
-                $rollback = true;
-            }
-        }
-        
-        if ($rollback) {
-            $notify('before_rollback', array('options'=>$options));
-            if (!rename($options['target_file'] . '.bak', $options['target_file'])) {
-                return $notify('error', array('reason'=>'Rollback operation failed', 'target'=>$options['target_file'] . '.bak')) && false;
-            }
-            $notify('after_rollback', array('options'=>$options));
-        } else {
-            if (!unlink($options['target_file'] . '.bak')) {
-                $notify('warn', array('reason'=>'Cleanup operation failed', 'target'=>$options['target_file'] . '.bak'));
-            }
-            $notify('finish', array('new_version'=>$next_version));
-        }
-
-        return null;
+        $updater = new Updater();
+        $updater->UpdateUrl='https://raw.github.com/uuf6429/httpdmon/master/build/httpdmon.php?nc=' . mt_rand();
+        $updater->LocalVersion =VERSION;
+        $updater->TryRunCmd='php -f ' . escapeshellarg(__FILE__) . ' -- ' . (IS_WINDOWS ? '/' : '-') . 'v';
+        $updater->EventHandler=array($this, 'HandleUpdateScriptEvent');
+        $updater->Run();
     }
 
     /**
@@ -269,6 +172,18 @@ class HttpdMon
                 }
                 break;
 
+            case 'start':
+                $con->WriteLine('Checking for updates...');
+                break;
+
+            case 'before_download':
+                $con->Write('Downloading...');
+                break;
+
+            case 'download_progress':
+                $con->WriteLine('Downloading... ' . round($args['current'] / max($args['total'], 1) * 100, 2) . '%');
+                break;
+
             case 'after_download':
                 // prepends to downloaded data if current file currently uses it
                 if (substr(file_get_contents(__FILE__), 0, 14) == '#!/usr/bin/php') {
@@ -284,21 +199,7 @@ class HttpdMon
                 $con->WriteLine('Update completed successfully.');
                 $con->WriteLine('Welcome to ' . basename(__FILE__, '.php') . ' ' . $args['new_version'] . '!');
                 break;
-
         }
-    }
-
-    protected function RunUpdater()
-    {
-        $this->UpdateScript(
-            'https://raw.github.com/uuf6429/httpdmon/master/build/httpdmon.php?nc=' . mt_rand(),
-            array(
-                'current_version' => VERSION,
-                'try_run' => true,
-                'try_run_cmd' => 'php -f ' . escapeshellarg(__FILE__) . ' -- ' . (IS_WINDOWS ? '/' : '-') . 'v',
-                'on_event' => array($this, 'HandleUpdateScriptEvent'),
-            )
-        );
     }
 
     public function Run()

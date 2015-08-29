@@ -116,10 +116,21 @@ class Console
         $this->parts = 0;
     }
     
+    public function Write($message = '')
+    {
+        fwrite(STDOUT, $message);
+    }
+    
     public function WriteLine($message = '')
     {
         $this->ResetParts();
-        echo $message . PHP_EOL;
+        $this->Write($message . PHP_EOL);
+    }
+    
+    public function OverwriteLine($message)
+    {
+        $width = $this->GetWidth();
+        $this->Write("\r" . substr(str_pad($message, $width, ' ', STR_PAD_RIGHT), 0, $width));
     }
     
     public function WritePart($parts)
@@ -130,7 +141,7 @@ class Console
 
         // count visible chars
         $this->parts += $this->StrLen($part);
-        echo $parts;
+        $this->Write($parts);
     }
     
     /**
@@ -174,11 +185,6 @@ class Console
         $color = "\033[" . $color . 'm';
         $reset = "\033[" . self::C_RESET . 'm';
         return !$colorize ? $message : $color . $message . $reset;
-    }
-    
-    public function OverwriteLine($message)
-    {
-        echo "\r" . substr(str_pad($message, cli_width(), ' ', STR_PAD_RIGHT), 0, cli_width());
     }
 
     public function ReadLine()
