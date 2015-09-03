@@ -330,12 +330,12 @@ class Console
         return false;
     }
 
-    public function GetSize($type = null)
-    {
-        static $cache = null;
+    protected $size_cache = null;
 
-        if (is_null($cache)) {
-            $cache = array(
+    public function GetSize()
+    {
+        if (is_null($this->size_cache)) {
+            $this->size_cache = array(
                 'c' => 20,
                 'l' => 4,
             );
@@ -347,38 +347,31 @@ class Console
                     foreach (array('Columns' => 'c', 'Lines' => 'l') as $word => $key) {
                         if (strpos($line, $word) !== false) {
                             $tmp = explode(':', $line);
-                            $cache[$key] = max($cache[$key], (int)trim($tmp[1]));
+                            $this->size_cache[$key] = max($this->size_cache[$key], (int)trim($tmp[1]));
                         }
                     }
                 }
             } else {
-                $cache['c'] = max($cache['c'], (int)exec('tput cols'));
-                $cache['l'] = max($cache['l'], (int)exec('tput lines'));
+                $this->size_cache = array(
+                    'c' => max($this->size_cache['c'], (int)exec('tput cols')),
+                    'l' => max($this->size_cache['l'], (int)exec('tput lines')),
+                );
             }
+
+            $this->size_cache = (object)$this->size_cache;
         }
 
-        switch ($type) {
-            case 'c':
-            case 'w':
-                return $cache['c'];
-            
-            case 'l':
-            case 'h':
-                return $cache['l'];
-            
-            default:
-                return $cache;
-        }
+        return $this->size_cache;
     }
 
     public function GetWidth()
     {
-        return $this->GetSize('w');
+        return $this->GetSize()->c;
     }
 
     public function GetHeight()
     {
-        return $this->GetSize('h');
+        return $this->GetSize()->l;
     }
 
     protected $parts = 0;
@@ -402,7 +395,7 @@ class Console
     public function OverwriteLine($message)
     {
         $width = $this->GetWidth();
-        $this->Write("\r" . substr(str_pad($message, $width, ' ', STR_PAD_RIGHT), 0, $width));
+        $this->WriteLine("\r" . substr(str_pad($message, $width, ' ', STR_PAD_RIGHT), 0, $width));
     }
     
     public function WritePart($parts)
@@ -760,10 +753,11 @@ class HttpdMon
                 break;
 
             case 'download_progress':
-                $con->WriteLine('Downloading... ' . round($args['current'] / max($args['total'], 1) * 100, 2) . '%');
+                $con->OverwriteLine('Downloading... ' . round($args['current'] / max($args['total'], 1) * 100, 2) . '%');
                 break;
 
             case 'after_download':
+                $con->OverwriteLine('Download complete.');
                 // prepends to downloaded data if current file currently uses it
                 if (substr(file_get_contents(__FILE__), 0, 14) == '#!/usr/bin/php') {
                     $args['data'] = '#!/usr/bin/php -q' . PHP_EOL . $args['data'];
@@ -905,78 +899,78 @@ class Updater
         $notify = $this->EventHandler;
         $rollback = false;
         $next_version = null;
-        static $intentions = array(-1=>'fail', 0=>'ignore', 1=>'update');
+        static $intentions = array(-1=> 'fail', 0=> 'ignore', 1=> 'update');
 
         // process
-        $notify('start', array('this'=>$this));
-        $notify('before_download', array('this'=>$this));
+        $notify('start', array('this' => $this));
+        $notify('before_download', array('this' => $this));
         if (!($data = $this->DownloadFile($this->UpdateUrl))) {
-            $notify('error', array('this'=>$this,'reason'=>'File download failed', 'target'=>$this->UpdateUrl));
+            $notify('error', array('this' => $this, 'reason' => 'File download failed', 'target' => $this->UpdateUrl));
             return;
         }
         
-        $notify('after_download', array('this'=>$this,'data'=>&$data));
+        $notify('after_download', array('this' => $this, 'data' => &$data));
         if (!preg_match($this->VersionRegex, $data, $next_version)) {
-            $notify('error', array('this'=>$this,'reason'=>'Could not determine version of target file', 'target'=>$data, 'result'=>$next_version));
+            $notify('error', array('this' => $this, 'reason' => 'Could not determine version of target file', 'target' => $data, 'result' => $next_version));
             return;
         }
         
         if (!($next_version = array_pop($next_version))) {
-            $notify('error', array('this'=>$this,'reason'=>'Version of target file is empty', 'target'=>$data, 'result'=>$next_version));
+            $notify('error', array('this' => $this, 'reason' => 'Version of target file is empty', 'target' => $data, 'result' => $next_version));
             return;
         }
         
         $v_diff = version_compare($next_version, $this->LocalVersion);
-        $should_fail = $notify('version_check', array('this'=>$this,'intention'=>$intentions[$v_diff], 'curr_version'=>$this->LocalVersion, 'next_version'=>$next_version));
+        $should_fail = $notify('version_check', array('this' => $this, 'intention' => $intentions[$v_diff], 'curr_version' => $this->LocalVersion, 'next_version' => $next_version));
         if ($should_fail === false) {
-            $notify('error', array('this'=>$this,'reason'=>'Update cancelled by user code'));
+            $notify('error', array('this' => $this, 'reason' => 'Update cancelled by user code'));
             return;
         }
         
         if ($v_diff === 0 && !$this->ForceUpdate) {
-            $notify('already_uptodate',array('this'=>$this));
+            $notify('already_uptodate',array('this' => $this));
             return;
         }
         
         if ($v_diff === -1 && !$this->ForceUpdate) {
-            $notify('warn', array('this'=>$this,'reason'=>'Local file is newer than remote one', 'curr_version'=>$this->LocalVersion, 'next_version'=>$next_version));
+            $notify('warn', array('this' => $this, 'reason' => 'Local file is newer than remote one', 'curr_version' => $this->LocalVersion, 'next_version' => $next_version));
             return;
         }
         
         if (!copy($this->TargetFile, $this->TargetFile . '.bak')) {
-            $notify('warn', array('this'=>$this,'reason'=>'Backup operation failed', 'target'=>$this->TargetFile));
+            $notify('warn', array('this' => $this, 'reason' => 'Backup operation failed', 'target' => $this->TargetFile));
         }
         
         if (!file_put_contents($this->TargetFile, $data)) {
-            $notify('warn', array('this'=>$this,'reason'=>'Failed writing to file', 'target'=>$this->TargetFile));
+            $notify('warn', array('this' => $this, 'reason' => 'Failed writing to file', 'target' => $this->TargetFile));
             $rollback = true;
         }
         
         if (!$rollback && $this->TryRun) {
-            $notify('before_try', array('this'=>$this));
+            $notify('before_try', array('this' => $this));
             ob_start();
             $exit = 0;
             passthru($this->TryRunCmd, $exit);
             $out = ob_get_clean();
-            $notify('after_try', array('this'=>$this, 'output'=>$out, 'exitcode'=>$exit));
+            $notify('after_try', array('this' => $this, 'output' => $out, 'exitcode' => $exit));
             if ($exit !== 0) {
-                $notify('warn', array('this'=>$this,'reason'=>'Downloaded update seems to be broken', 'output'=>$out, 'exitcode'=>$exit));
+                $notify('warn', array('this' => $this, 'reason' => 'Downloaded update seems to be broken', 'output' => $out, 'exitcode' => $exit));
                 $rollback = true;
             }
         }
         
         if ($rollback) {
-            $notify('before_rollback', array('this'=>$this));
+            $notify('before_rollback', array('this' => $this));
             if (!rename($this->TargetFile . '.bak', $this->TargetFile)) {
-                $notify('error', array('this'=>$this,'reason'=>'Rollback operation failed', 'target'=>$this->TargetFile . '.bak'));
+                $notify('error', array('this' => $this, 'reason' => 'Rollback operation failed', 'target' => $this->TargetFile . '.bak'));
                 return;
             }
-            $notify('after_rollback', array('this'=>$this));
+            $notify('after_rollback', array('this' => $this));
         } else {
             if (!unlink($this->TargetFile . '.bak')) {
-                $notify('warn', array('this'=>$this,'reason'=>'Cleanup operation failed', 'target'=>$this->TargetFile . '.bak'));
+                $notify('warn', array('this' => $this, 'reason' => 'Cleanup operation failed', 'target' => $this->TargetFile . '.bak'));
             }
-            $notify('finish', array('this'=>$this,'new_version'=>$next_version));
+            $notify('finish', array('this' => $this, 'new_version' => $next_version));
         }
     }
 
@@ -1004,10 +998,10 @@ class Updater
         return $this->fileData;
     }
 
-    public function DownloadProgress($curl, $download_size, $downloaded_size)
+    public function DownloadProgress($download_size, $downloaded_size)
     {
         $notify = $this->EventHandler;
-        $notify('download_progress', array('this'=>$this,'total'=>$download_size,'current'=>$downloaded_size));
+        $notify('download_progress', array('this' => $this, 'total' => $download_size, 'current' => $downloaded_size));
     }
 
     public function DownloadWrite($curl, $data)

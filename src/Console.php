@@ -58,12 +58,12 @@ class Console
         return false;
     }
 
-    public function GetSize($type = null)
-    {
-        static $cache = null;
+    protected $size_cache = null;
 
-        if (is_null($cache)) {
-            $cache = array(
+    public function GetSize()
+    {
+        if (is_null($this->size_cache)) {
+            $this->size_cache = array(
                 'c' => 20,
                 'l' => 4,
             );
@@ -75,38 +75,31 @@ class Console
                     foreach (array('Columns' => 'c', 'Lines' => 'l') as $word => $key) {
                         if (strpos($line, $word) !== false) {
                             $tmp = explode(':', $line);
-                            $cache[$key] = max($cache[$key], (int)trim($tmp[1]));
+                            $this->size_cache[$key] = max($this->size_cache[$key], (int)trim($tmp[1]));
                         }
                     }
                 }
             } else {
-                $cache['c'] = max($cache['c'], (int)exec('tput cols'));
-                $cache['l'] = max($cache['l'], (int)exec('tput lines'));
+                $this->size_cache = array(
+                    'c' => max($this->size_cache['c'], (int)exec('tput cols')),
+                    'l' => max($this->size_cache['l'], (int)exec('tput lines')),
+                );
             }
+
+            $this->size_cache = (object)$this->size_cache;
         }
 
-        switch ($type) {
-            case 'c':
-            case 'w':
-                return $cache['c'];
-            
-            case 'l':
-            case 'h':
-                return $cache['l'];
-            
-            default:
-                return $cache;
-        }
+        return $this->size_cache;
     }
 
     public function GetWidth()
     {
-        return $this->GetSize('w');
+        return $this->GetSize()->c;
     }
 
     public function GetHeight()
     {
-        return $this->GetSize('h');
+        return $this->GetSize()->l;
     }
 
     protected $parts = 0;
@@ -130,7 +123,7 @@ class Console
     public function OverwriteLine($message)
     {
         $width = $this->GetWidth();
-        $this->Write("\r" . substr(str_pad($message, $width, ' ', STR_PAD_RIGHT), 0, $width));
+        $this->WriteLine("\r" . substr(str_pad($message, $width, ' ', STR_PAD_RIGHT), 0, $width));
     }
     
     public function WritePart($parts)

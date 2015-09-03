@@ -181,10 +181,11 @@ class HttpdMon
                 break;
 
             case 'download_progress':
-                $con->WriteLine('Downloading... ' . round($args['current'] / max($args['total'], 1) * 100, 2) . '%');
+                $con->OverwriteLine('Downloading... ' . round($args['current'] / max($args['total'], 1) * 100, 2) . '%');
                 break;
 
             case 'after_download':
+                $con->OverwriteLine('Download complete.');
                 // prepends to downloaded data if current file currently uses it
                 if (substr(file_get_contents(__FILE__), 0, 14) == '#!/usr/bin/php') {
                     $args['data'] = '#!/usr/bin/php -q' . PHP_EOL . $args['data'];
