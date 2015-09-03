@@ -3,7 +3,7 @@
 ### boot.php
 
 // define some base constants
-define('VERSION', '2.0.5');
+define('VERSION', '2.0.6');
 define('IS_WINDOWS', strtoupper(substr(PHP_OS, 0, 3)) === 'WIN');
 
 // define our (very simplistic) autoloader
@@ -877,37 +877,23 @@ class Updater
     private $fileData;
 
     /**
+     * @var boolean
+     */
+    protected $rollbackRequired = false;
+
+    /**
      * Attempts to update current file from URL.
      */
     public function Run()
     {
-        // preconditions
-        if (!$this->UpdateUrl) {
-            throw new Exception('Update URL not specified.');
-        }
-        if (!$this->LocalVersion) {
-            $this->LocalVersion = '0.0.0';
-        }
-        if (!$this->TargetFile) {
-            $this->TargetFile = $_SERVER['SCRIPT_FILENAME'];
-        }
-
-        if (!$this->TryRunCmd) {
-            $this->TryRunCmd = 'php -f ' . escapeshellarg($this->TargetFile);
-        }
-
-        if (!$this->EventHandler) {
-            $this->EventHandler = 'pi'; // NOOP
-        }
-
-
         // initialization
+        $this->SetUp();
         $notify = $this->EventHandler;
-        $rollback = false;
+        $this->rollbackRequired = false;
         $next_version = null;
         static $intentions = array(-1=> 'fail', 0=> 'ignore', 1=> 'update');
 
-        // process
+        // download file and compare version
         $notify('start', array('this' => $this));
         $notify('before_download', array('this' => $this));
         if (!($data = $this->DownloadFile($this->UpdateUrl))) {
@@ -943,44 +929,101 @@ class Updater
             $this->NotifyWarn('Backup operation failed', array('target' => $this->TargetFile));
         }
         
+        // save file and attempt run
         if (!file_put_contents($this->TargetFile, $data)) {
             $this->NotifyWarn('Failed writing to file', array('target' => $this->TargetFile));
-            $rollback = true;
+            $this->rollbackRequired = true;
         }
         
-        if (!$rollback && $this->TryRun) {
-            $notify('before_try', array('this' => $this));
-            ob_start();
-            $exit = 0;
-            passthru($this->TryRunCmd, $exit);
-            $out = ob_get_clean();
-            $notify('after_try', array('this' => $this, 'output' => $out, 'exitcode' => $exit));
-            if ($exit !== 0) {
-                $this->NotifyWarn('Downloaded update seems to be broken', array('output' => $out, 'exitcode' => $exit));
-                $rollback = true;
-            }
+        if (!$this->rollbackRequired && $this->TryRun) {
+            $this->DoTryRun();
         }
         
-        if ($rollback) {
-            $notify('before_rollback', array('this' => $this));
-            if (!rename($this->TargetFile . '.bak', $this->TargetFile)) {
-                return $this->NotifyError('Rollback operation failed', array('target' => $this->TargetFile . '.bak'));
-            }
-            $notify('after_rollback', array('this' => $this));
+        // finalize process
+        if ($this->rollbackRequired) {
+            $this->Rollback();
         } else {
-            if (!unlink($this->TargetFile . '.bak')) {
-                $this->NotifyWarn('Cleanup operation failed', array('target' => $this->TargetFile . '.bak'));
-            }
-            $notify('finish', array('this' => $this, 'new_version' => $next_version));
+            $this->Complete($next_version);
         }
     }
 
+    protected function DoTryRun()
+    {
+        $notify = $this->EventHandler;
+        
+        $notify('before_try', array('this' => $this));
+        ob_start();
+        $exit = 0;
+        passthru($this->TryRunCmd, $exit);
+        $out = ob_get_clean();
+        $notify('after_try', array('this' => $this, 'output' => $out, 'exitcode' => $exit));
+        if ($exit !== 0) {
+            $this->NotifyWarn('Downloaded update seems to be broken', array('output' => $out, 'exitcode' => $exit));
+            $this->rollbackRequired = true;
+        }
+    }
+
+    protected function Rollback()
+    {
+        $notify = $this->EventHandler;
+
+        $notify('before_rollback', array('this' => $this));
+        
+        if (!rename($this->TargetFile . '.bak', $this->TargetFile)) {
+            return $this->NotifyError('Rollback operation failed', array('target' => $this->TargetFile . '.bak'));
+        }
+        
+        $notify('after_rollback', array('this' => $this));
+    }
+
+    protected function Complete($next_version)
+    {
+        $notify = $this->EventHandler;
+
+        if (!unlink($this->TargetFile . '.bak')) {
+            $this->NotifyWarn('Cleanup operation failed', array('target' => $this->TargetFile . '.bak'));
+        }
+        
+        $notify('finish', array('this' => $this, 'new_version' => $next_version));
+    }
+
+    protected function SetUp()
+    {
+        if (!$this->UpdateUrl) {
+            throw new Exception('Update URL not specified.');
+        }
+        if (!$this->LocalVersion) {
+            $this->LocalVersion = '0.0.0';
+        }
+        if (!$this->TargetFile) {
+            $this->TargetFile = $_SERVER['SCRIPT_FILENAME'];
+        }
+
+        if (!$this->TryRunCmd) {
+            $this->TryRunCmd = 'php -f ' . escapeshellarg($this->TargetFile);
+        }
+
+        if (!$this->EventHandler) {
+            $this->EventHandler = 'pi'; // NOOP
+        }
+    }
+
+    /**
+     * Trigger warning event
+     * @param string $reason
+     * @param array $args
+     */
     protected function NotifyWarn($reason, $args = array())
     {
         $notify = $this->EventHandler;
         $notify('warn', array_merge($args, array('this' => $this, 'reason' => $reason)));
     }
 
+    /**
+     * Trigger error event
+     * @param string $reason
+     * @param array $args
+     */
     protected function NotifyError($reason, $args = array())
     {
         $notify = $this->EventHandler;
