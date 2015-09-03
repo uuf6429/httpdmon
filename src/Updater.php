@@ -60,18 +60,18 @@ class Updater
             throw new Exception('Update URL not specified.');
         }
         if (!$this->LocalVersion) {
-            $this->LocalVersion='0.0.0';
+            $this->LocalVersion = '0.0.0';
         }
         if (!$this->TargetFile) {
-            $this->TargetFile= $_SERVER['SCRIPT_FILENAME'];
+            $this->TargetFile = $_SERVER['SCRIPT_FILENAME'];
         }
 
         if (!$this->TryRunCmd) {
-            $this->TryRunCmd='php -f ' . escapeshellarg($this->TargetFile);
+            $this->TryRunCmd = 'php -f ' . escapeshellarg($this->TargetFile);
         }
 
         if (!$this->EventHandler) {
-            $this->EventHandler='pi'; // NOOP
+            $this->EventHandler = 'pi'; // NOOP
         }
 
 
@@ -108,7 +108,7 @@ class Updater
         }
         
         if ($v_diff === 0 && !$this->ForceUpdate) {
-            $notify('already_uptodate',array('this' => $this));
+            $notify('already_uptodate', array('this' => $this));
             return;
         }
         
@@ -154,9 +154,12 @@ class Updater
         }
     }
 
+    /**
+     * @param string $url
+     */
     protected function DownloadFile($url)
     {
-        $this->fileData='';
+        $this->fileData = '';
 
         if (!($ch = curl_init($url))) {
             throw new Exception('curl_init failed.');
