@@ -15,21 +15,25 @@ class Console
     {
         global $argv;
 
+        // --opt=val
         if (substr($optname, 0, 1) == '-') {
-            // --opt=val
             $optname = '-' . $optname . '=';
             $optlen = strlen($optname);
             foreach ($argv as $arg) {
-                if (substr($arg, 0, $optlen) == $optname) {
+                if (substr($arg, 0, $optlen) === $optname) {
                     return substr($arg, $optlen);
                 }
             }
-        } else {
-            // -opt val
-            $pos = array_search((IS_WINDOWS ? '/' : '-') . $optname, $argv);
-            if ($pos !== false && isset($argv[$pos + 1]) && substr($argv[$pos + 1], 0, 1) != (IS_WINDOWS ? '/' : '-')) {
-                return $argv[$pos + 1];
-            }
+            return $default;
+        }
+
+        // -opt val
+        $pos = array_search((IS_WINDOWS ? '/' : '-') . $optname, $argv);
+        if ($pos !== false                                                  // if argument exists
+            && isset($argv[$pos + 1])                                       // .. and there is something after it
+            && substr($argv[$pos + 1], 0, 1) != (IS_WINDOWS ? '/' : '-')    // .. and it is not another argument
+        ) {
+            return $argv[$pos + 1];
         }
         return $default;
     }
