@@ -95,6 +95,20 @@ class HttpdMon
         $this->console->WriteLine('Copyright (c) 2013-' . date('Y') . ' Christian Sciberras');
     }
 
+    protected function GetIntervalFromCli()
+    {
+        return intval(($this->console->HasArg('-delay')
+                ? $this->console->GetArg('-delay', 100)
+                : $this->console->GetArg('d', 100)
+            ) * 1000);
+    }
+
+    protected function GetUseColorFromCli()
+    {
+        return !$this->console->HasArg('t')
+            && (!IS_WINDOWS || $this->console->HasArg('c'));
+    }
+
     protected function RunMainLoop()
     {
         if ($this->config->IsEmpty()) {
@@ -103,14 +117,11 @@ class HttpdMon
 
         $this->console->Clear();
         
-        $this->console->UseColor = !$this->console->HasArg('t') && (!IS_WINDOWS || $this->console->HasArg('c'));
+        $this->console->UseColor = $this->GetUseColorFromCli();
 
         $this->errorsOnly = $this->console->HasArg('m');
         $this->resolveIps = $this->console->HasArg('r');
-        $this->interval = intval(($this->console->HasArg('-delay')
-                ? $this->console->GetArg('-delay', 100)
-                : $this->console->GetArg('d', 100)
-            ) * 1000);
+        $this->interval = $this->GetIntervalFromCli();
         
         $this->monitors = $this->CreateMonitors();
         
