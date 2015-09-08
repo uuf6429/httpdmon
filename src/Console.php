@@ -15,8 +15,8 @@ class Console
     {
         global $argv;
 
-        // --opt=val
         if (substr($optname, 0, 1) == '-') {
+            // --opt=val
             $optname = '-' . $optname . '=';
             $optlen = strlen($optname);
             foreach ($argv as $arg) {
@@ -24,16 +24,16 @@ class Console
                     return substr($arg, $optlen);
                 }
             }
-            return $default;
-        }
+        } else {
+            // -opt val
+            $pos = array_search((IS_WINDOWS ? '/' : '-') . $optname, $argv);
+            if ($pos !== false                                                  // if argument exists
+                && isset($argv[$pos + 1])                                       // .. and there is something after it
+                && substr($argv[$pos + 1], 0, 1) != (IS_WINDOWS ? '/' : '-')    // .. and it is not another argument
+            ) {
+                return $argv[$pos + 1];
+            }
 
-        // -opt val
-        $pos = array_search((IS_WINDOWS ? '/' : '-') . $optname, $argv);
-        if ($pos !== false                                                  // if argument exists
-            && isset($argv[$pos + 1])                                       // .. and there is something after it
-            && substr($argv[$pos + 1], 0, 1) != (IS_WINDOWS ? '/' : '-')    // .. and it is not another argument
-        ) {
-            return $argv[$pos + 1];
         }
         return $default;
     }
