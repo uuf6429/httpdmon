@@ -3,7 +3,7 @@
 ### boot.php
 
 // define some base constants
-define('VERSION', '2.0.7');
+define('VERSION', '2.0.8');
 define('IS_WINDOWS', strtoupper(substr(PHP_OS, 0, 3)) === 'WIN');
 
 // define our (very simplistic) autoloader
@@ -615,8 +615,6 @@ class HttpdMon
         // try being smarter than the user :D
         if ($this->console->HasArg('c') && $this->console->HasArg('t')) {
             throw new Exception('Please decide if you want colors (-c) or not (-t), not both, Dummkopf!');
-        } else {
-            $this->console->UseColor = !$this->console->HasArg('t') && (!IS_WINDOWS || $this->console->HasArg('c'));
         }
     }
     
@@ -692,12 +690,15 @@ class HttpdMon
 
         $this->console->Clear();
         
+        $this->console->UseColor = !$this->console->HasArg('t') && (!IS_WINDOWS || $this->console->HasArg('c'));
+
         $this->errorsOnly = $this->console->HasArg('m');
         $this->resolveIps = $this->console->HasArg('r');
         $this->interval = intval(($this->console->HasArg('-delay')
                 ? $this->console->GetArg('-delay', 100)
                 : $this->console->GetArg('d', 100)
             ) * 1000);
+        
         $this->monitors = $this->CreateMonitors();
         
         while ($this->enabled) {
