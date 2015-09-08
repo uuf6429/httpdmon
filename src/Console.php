@@ -3,6 +3,11 @@
 class Console
 {
     /**
+     * @var boolean
+     */
+    public $UseColor = true;
+
+    /**
      * @param string $optname
      * @param mixed $default
      */
@@ -41,6 +46,11 @@ class Console
         }
     }
 
+    /**
+     * Returns whether any of the passed options has been set in CLI or not.
+     * @param string|array $option
+     * @return boolean
+     */
     public function HasArg($option)
     {
         global $argv;
@@ -60,7 +70,7 @@ class Console
 
     protected $size_cache = null;
 
-    public function GetSize()
+    protected function GetSize()
     {
         if (is_null($this->size_cache)) {
             $this->size_cache = array(
@@ -92,11 +102,17 @@ class Console
         return $this->size_cache;
     }
 
+    /**
+     * @return integer Number of characters on one line in console window.
+     */
     public function GetWidth()
     {
         return $this->GetSize()->c;
     }
 
+    /**
+     * @return integer Number of lines in console window.
+     */
     public function GetHeight()
     {
         return $this->GetSize()->l;
@@ -174,10 +190,9 @@ class Console
 
     public function Colorize($message, $color)
     {
-        $colorize = !(defined('FORCE_PLAIN') && FORCE_PLAIN) && (!IS_WINDOWS || (defined('FORCE_COLOR') && FORCE_COLOR));
         $color = "\033[" . $color . 'm';
         $reset = "\033[" . self::C_RESET . 'm';
-        return !$colorize ? $message : $color . $message . $reset;
+        return !$this->UseColor ? $message : $color . $message . $reset;
     }
 
     public function ReadLine()

@@ -28,6 +28,8 @@ class HttpdMon
         // try being smarter than the user :D
         if ($this->console->HasArg('c') && $this->console->HasArg('t')) {
             throw new Exception('Please decide if you want colors (-c) or not (-t), not both, Dummkopf!');
+        } else {
+            $this->console->UseColor = !$this->console->HasArg('t') && (!IS_WINDOWS || $this->console->HasArg('c'));
         }
     }
     
