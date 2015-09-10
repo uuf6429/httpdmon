@@ -3,7 +3,7 @@
 ### boot.php
 
 // define some base constants
-define('VERSION', '2.0.10');
+define('VERSION', '2.1.0');
 define('IS_WINDOWS', strtoupper(substr(PHP_OS, 0, 3)) === 'WIN');
 
 // define our (very simplistic) autoloader
@@ -196,16 +196,16 @@ class AccesslogFileMonitor extends AbstractFileMonitor
                 continue; // not an error entry, go to next one
             }
             $con->WritePart('[' . $con->Colorize('ACCESS', Console::C_CYAN) . '] ');
-            $con->WritePart($con->Colorize($resIps ? substr(str_pad(resolve_ip($line->ip), 48), 0, 48) : str_pad($line->ip, 16), Console::C_YELLOW) . ' ');
+            $con->WritePart($con->Colorize($resIps ? substr(str_pad($this->ResolveIP($line->ip), 48), 0, 48) : str_pad($line->ip, 16), Console::C_YELLOW) . ' ');
             $con->WritePart($con->Colorize(str_pad($line->domain, 32), Console::C_BROWN) . ' ');
             $con->WritePart($con->Colorize(str_pad($line->method, 8), Console::C_LIGHT_PURPLE));
+
             $long_mesg = ''
-                . $con->Colorize(str_replace('&', $con->Colorize('&', Console::C_DARK_GRAY), $line->url), Console::C_WHITE)
+                . $con->ColorizeUrl($line->url)
                 . $con->Colorize(' > ', Console::C_DARK_GRAY)
                 . $con->Colorize($line->code, $line->code < 400 ? Console::C_GREEN : Console::C_RED)
                 . $con->Colorize(' (', Console::C_DARK_GRAY) . $con->Colorize($line->size, Console::C_WHITE) . $con->Colorize(' bytes)', Console::C_DARK_GRAY)
             ;
-            //write_line(implode(str_pad(PHP_EOL, count_parts()), str_split($long_mesg, cli_width() - count_parts())));
             $con->WriteLine($long_mesg);
         }
     }
@@ -471,6 +471,40 @@ class Console
         return !$this->UseColor ? $message : $color . $message . $reset;
     }
 
+    
+    /**
+     * @param string $url
+     * @return string
+     */
+    protected function ColorizeUrl($url)
+    {
+        $url = explode('?', $url, 2);
+
+        // colorize file path
+        $url[0] = str_replace('/', $this->Colorize('/', Console::C_DARK_GRAY), $url[0]);
+
+        // colorize query
+        if (isset($url[1])) {
+            $url[1] = explode('&', $url[1]);
+
+            foreach ($url[1] as $i => $kv) {
+                $kv = explode('=', $kv, 2);
+
+                // colorize key/value
+                $kv[0]=$this->Colorize($kv[0], Console::C_WHITE);
+                if (isset($kv[1])) {
+                    $kv[1]=$this->Colorize($kv[1], Console::C_LIGHT_GRAY);
+                }
+
+                $url[1][$i] = implode($this->Colorize('=', Console::C_DARK_GRAY), $kv);
+            }
+
+            $url[1] = implode($this->Colorize('&', Console::C_DARK_GRAY), $url[1]);
+        }
+
+        return $this->Colorize(implode($this->Colorize('?', Console::C_DARK_GRAY), $url), Console::C_DARK_GRAY);
+    }
+
     public function ReadLine()
     {
         return fgets(STDIN);
@@ -583,7 +617,6 @@ class ErrorlogFileMonitor extends AbstractFileMonitor
             $con->WritePart($con->Colorize($resIps ? substr(str_pad($this->ResolveIP($line->ip), 48), 0, 48) : str_pad($line->ip, 16), Console::C_YELLOW) . ' ');
             $con->WritePart($con->Colorize(str_pad($line->domain, 32), Console::C_BROWN) . ' ');
             $long_mesg = $con->Colorize($line->message, Console::C_RED);
-            //$con->WriteLine(implode(str_pad(PHP_EOL, count_parts()), str_split($long_mesg, cli_width() - count_parts())));
             $con->WriteLine($long_mesg);
         }
     }

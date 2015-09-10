@@ -199,6 +199,40 @@ class Console
         return !$this->UseColor ? $message : $color . $message . $reset;
     }
 
+    
+    /**
+     * @param string $url
+     * @return string
+     */
+    protected function ColorizeUrl($url)
+    {
+        $url = explode('?', $url, 2);
+
+        // colorize file path
+        $url[0] = str_replace('/', $this->Colorize('/', Console::C_DARK_GRAY), $url[0]);
+
+        // colorize query
+        if (isset($url[1])) {
+            $url[1] = explode('&', $url[1]);
+
+            foreach ($url[1] as $i => $kv) {
+                $kv = explode('=', $kv, 2);
+
+                // colorize key/value
+                $kv[0]=$this->Colorize($kv[0], Console::C_WHITE);
+                if (isset($kv[1])) {
+                    $kv[1]=$this->Colorize($kv[1], Console::C_LIGHT_GRAY);
+                }
+
+                $url[1][$i] = implode($this->Colorize('=', Console::C_DARK_GRAY), $kv);
+            }
+
+            $url[1] = implode($this->Colorize('&', Console::C_DARK_GRAY), $url[1]);
+        }
+
+        return $this->Colorize(implode($this->Colorize('?', Console::C_DARK_GRAY), $url), Console::C_DARK_GRAY);
+    }
+
     public function ReadLine()
     {
         return fgets(STDIN);
