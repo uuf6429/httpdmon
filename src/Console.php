@@ -219,9 +219,9 @@ class Console
                 $kv = explode('=', $kv, 2);
 
                 // colorize key/value
-                $kv[0]=$this->Colorize($kv[0], Console::C_WHITE);
+                $kv[0] = $this->Colorize($kv[0], Console::C_WHITE);
                 if (isset($kv[1])) {
-                    $kv[1]=$this->Colorize($kv[1], Console::C_LIGHT_GRAY);
+                    $kv[1] = $this->Colorize($kv[1], Console::C_LIGHT_GRAY);
                 }
 
                 $url[1][$i] = implode($this->Colorize('=', Console::C_DARK_GRAY), $kv);
