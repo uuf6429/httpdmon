@@ -3,7 +3,7 @@
 ### boot.php
 
 // define some base constants
-define('VERSION', '2.1.0');
+define('VERSION', '2.1.1');
 define('IS_WINDOWS', strtoupper(substr(PHP_OS, 0, 3)) === 'WIN');
 
 // define our (very simplistic) autoloader
@@ -476,7 +476,7 @@ class Console
      * @param string $url
      * @return string
      */
-    protected function ColorizeUrl($url)
+    public function ColorizeUrl($url)
     {
         $url = explode('?', $url, 2);
 

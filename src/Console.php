@@ -204,7 +204,7 @@ class Console
      * @param string $url
      * @return string
      */
-    protected function ColorizeUrl($url)
+    public function ColorizeUrl($url)
     {
         $url = explode('?', $url, 2);
 
